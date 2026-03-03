@@ -357,7 +357,8 @@ function inicializarTabla(){
     $('#tablaAverias').colResizable({liveDrag:true,gripInnerHtml:"<div class='col-grip'></div>",draggingClass:'col-dragging',minWidth:50});
   }
 
-  document.getElementById('btnAleatorio').addEventListener('click',function(){
+  const btnAleatorio=document.getElementById('btnAleatorio');
+  if(btnAleatorio) btnAleatorio.addEventListener('click',function(){
     window._ordenAleatorio = !window._ordenAleatorio;
     this.textContent = window._ordenAleatorio ? '🔀 Orden original' : '🔀 Orden aleatorio';
     this.style.background = window._ordenAleatorio ? 'var(--accent)' : '';
@@ -519,32 +520,49 @@ function cmpFecha(a,b){
   return new Date(a.getFullYear(),a.getMonth(),a.getDate())-new Date(b.getFullYear(),b.getMonth(),b.getDate());
 }
 
-// ── Resize SOLO de altura — handler global único ──
+// ── Resize altura + anchura — handler global único ──
 function iniciarResizeAltura(){
-  let panel=null, startY=0, startH=0;
+  let panel=null, dir='', startX=0, startY=0, startW=0, startH=0;
 
-  // Cada handle solo dispara mousedown — el movimiento lo gestiona document
-  document.querySelectorAll('.resize-handle').forEach(h=>{
+  document.querySelectorAll('.resize-handle, .resize-handle-e, .resize-handle-se').forEach(h=>{
     h.addEventListener('mousedown', e=>{
       e.preventDefault();
       e.stopPropagation();
       panel = document.getElementById(h.dataset.panel);
-      startY = e.clientY;
-      startH = panel.offsetHeight;
-      document.body.style.cursor='ns-resize';
+      startX = e.clientX; startY = e.clientY;
+      startW = panel.offsetWidth; startH = panel.offsetHeight;
+      dir = h.classList.contains('resize-handle-se') ? 'se'
+          : h.classList.contains('resize-handle-e')  ? 'e' : 's';
+      document.body.style.cursor = dir==='s'?'ns-resize':dir==='e'?'ew-resize':'nwse-resize';
       document.body.style.userSelect='none';
     });
   });
 
   document.addEventListener('mousemove', e=>{
     if(!panel) return;
-    const newH = Math.max(150, startH + (e.clientY - startY));
-    panel.style.height = newH + 'px';
+    if(dir==='s'||dir==='se'){
+      panel.style.height = Math.max(150, startH+(e.clientY-startY))+'px';
+    }
+    if(dir==='e'||dir==='se'){
+      // Resize horizontal: ajustar flex-basis de este panel y el hermano en la misma fila
+      const row = panel.closest('.chart-row');
+      if(!row || panel.classList.contains('wide')) return;
+      const rowW = row.getBoundingClientRect().width;
+      const panels = [...row.querySelectorAll('.chart-panel')];
+      if(panels.length < 2) return;
+      const delta = e.clientX - startX;
+      const newW = Math.min(rowW - 214, Math.max(200, startW + delta));
+      const sibW = rowW - newW - 14;
+      // Aplicar flex-basis para que cada panel ocupe exactamente su ancho
+      panel.style.flex = `0 0 ${newW}px`;
+      const sib = panels.find(p => p !== panel);
+      if(sib) sib.style.flex = `0 0 ${sibW}px`;
+    }
   });
 
   document.addEventListener('mouseup', ()=>{
     if(!panel) return;
-    panel=null;
+    panel=null; dir='';
     document.body.style.cursor='';
     document.body.style.userSelect='';
   });

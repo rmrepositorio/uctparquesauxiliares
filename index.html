@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>U.C.T. - PARQUES AUXILIARES</title>
+<title>Unidad Control Tráfico - Parques Auxiliares - Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
@@ -36,9 +36,9 @@
   <div class="kpi">Vehículo top<span id="vehiculoTop">-</span></div>
 </div>
 
-<div class="charts">
+<div class="charts-wrapper">
 
-  <div class="chart-cell">
+  <div class="chart-row" id="row-1">
     <div class="chart-panel" id="panel-familia">
       <div class="panel-header">
         <span class="panel-title">Familia Avería</span>
@@ -46,10 +46,9 @@
       </div>
       <canvas id="graficoFamilia"></canvas>
       <div class="resize-handle" data-panel="panel-familia"></div>
+      <div class="resize-handle-e" data-panel="panel-familia" data-row="row-1"></div>
+      <div class="resize-handle-se" data-panel="panel-familia" data-row="row-1"></div>
     </div>
-  </div>
-
-  <div class="chart-cell">
     <div class="chart-panel" id="panel-turno">
       <div class="panel-header">
         <span class="panel-title">Turno</span>
@@ -57,10 +56,12 @@
       </div>
       <canvas id="graficoTurno"></canvas>
       <div class="resize-handle" data-panel="panel-turno"></div>
+      <div class="resize-handle-e" data-panel="panel-turno" data-row="row-1"></div>
+      <div class="resize-handle-se" data-panel="panel-turno" data-row="row-1"></div>
     </div>
   </div>
 
-  <div class="chart-cell">
+  <div class="chart-row" id="row-2">
     <div class="chart-panel" id="panel-origen">
       <div class="panel-header">
         <span class="panel-title">Origen Aviso</span>
@@ -68,10 +69,9 @@
       </div>
       <canvas id="graficoOrigen"></canvas>
       <div class="resize-handle" data-panel="panel-origen"></div>
+      <div class="resize-handle-e" data-panel="panel-origen" data-row="row-2"></div>
+      <div class="resize-handle-se" data-panel="panel-origen" data-row="row-2"></div>
     </div>
-  </div>
-
-  <div class="chart-cell">
     <div class="chart-panel" id="panel-familiaVeh">
       <div class="panel-header">
         <span class="panel-title">Familia Vehículo</span>
@@ -79,11 +79,13 @@
       </div>
       <canvas id="graficoFamiliaVeh"></canvas>
       <div class="resize-handle" data-panel="panel-familiaVeh"></div>
+      <div class="resize-handle-e" data-panel="panel-familiaVeh" data-row="row-2"></div>
+      <div class="resize-handle-se" data-panel="panel-familiaVeh" data-row="row-2"></div>
     </div>
   </div>
 
-  <div class="chart-cell wide">
-    <div class="chart-panel" id="panel-vhlo">
+  <div class="chart-row" id="row-3">
+    <div class="chart-panel wide" id="panel-vhlo">
       <div class="panel-header">
         <span class="panel-title">Vehículo (VHLO)</span>
         <button class="btn-filtro-panel" data-campo="VHLO">⊟</button>
@@ -93,8 +95,8 @@
     </div>
   </div>
 
-  <div class="chart-cell wide">
-    <div class="chart-panel" id="panel-descripcion">
+  <div class="chart-row" id="row-4">
+    <div class="chart-panel wide" id="panel-descripcion">
       <div class="panel-header">
         <span class="panel-title">Ranking Descripción Avería</span>
         <button class="btn-filtro-panel" data-campo="_DESCRIPCION_NORM">⊟</button>
@@ -104,8 +106,8 @@
     </div>
   </div>
 
-  <div class="chart-cell wide">
-    <div class="chart-panel" id="panel-evolucion">
+  <div class="chart-row" id="row-5">
+    <div class="chart-panel wide" id="panel-evolucion">
       <div class="panel-header">
         <span class="panel-title">Evolución mensual por familia</span>
         <button class="btn-filtro-panel" data-campo="FAMILIA AVERIA">⊟</button>

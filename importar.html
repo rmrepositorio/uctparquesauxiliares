@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Importar Datos — Control Tráfico</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap');
+
+:root {
+  --bg:#0f0f1a; --bg2:#171728; --bg3:#1e1e35;
+  --accent:#00d4aa; --accent2:#7c6fe0; --danger:#ff5566;
+  --text:#e0e0f0; --muted:#6666aa; --border:#2a2a45;
+  --shadow:0 8px 32px rgba(0,0,0,0.5);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;padding:0;}
+
+/* Header */
+.header{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:18px 32px;display:flex;align-items:center;gap:16px;
+}
+.header-logo{font-family:'Rajdhani',sans-serif;font-size:1.4em;font-weight:700;color:var(--accent);letter-spacing:2px;}
+.header-sub{color:var(--muted);font-size:.85em;margin-left:auto;}
+.btn-back{
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+  transition:all .2s;
+}
+.btn-back:hover{border-color:var(--accent);color:var(--accent);}
+
+.container{max-width:1100px;margin:0 auto;padding:32px;}
+
+/* Steps */
+.steps{display:flex;gap:0;margin-bottom:40px;}
+.step{
+  flex:1;padding:14px 20px;background:var(--bg2);border:1px solid var(--border);
+  position:relative;font-size:.8em;color:var(--muted);
+  transition:all .3s;
+}
+.step:first-child{border-radius:8px 0 0 8px;}
+.step:last-child{border-radius:0 8px 8px 0;}
+.step.active{background:var(--bg3);border-color:var(--accent);color:var(--text);}
+.step.done{border-color:var(--accent);color:var(--accent);}
+.step-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;
+  background:var(--border);color:var(--muted);
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1em;
+  margin-right:8px;transition:all .3s;
+}
+.step.active .step-num{background:var(--accent);color:var(--bg);}
+.step.done .step-num{background:var(--accent);color:var(--bg);}
+.step.done .step-num::before{content:'✓';}
+.step.done .step-num-inner{display:none;}
+
+/* Zone */
+.zone{
+  background:var(--bg2);border:2px dashed var(--border);border-radius:12px;
+  padding:48px 32px;text-align:center;transition:all .3s;cursor:pointer;
+  position:relative;
+}
+.zone:hover,.zone.drag-over{border-color:var(--accent);background:var(--bg3);}
+.zone-icon{font-size:3em;margin-bottom:16px;display:block;}
+.zone-title{font-family:'Rajdhani',sans-serif;font-size:1.4em;font-weight:700;color:var(--text);margin-bottom:8px;}
+.zone-sub{color:var(--muted);font-size:.85em;margin-bottom:24px;}
+.zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 24px;border-radius:8px;font-size:13px;font-weight:500;
+  cursor:pointer;border:none;transition:all .2s;font-family:'Inter',sans-serif;
+}
+.btn-primary{background:var(--accent);color:var(--bg);}
+.btn-primary:hover{opacity:.85;transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-danger:hover{opacity:.85;}
+
+/* Info cards */
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0;}
+.info-card{
+  background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:8px;padding:16px;
+}
+.info-card-label{font-size:.75em;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.info-card-val{font-family:'Rajdhani',sans-serif;font-size:1.6em;font-weight:700;color:var(--accent);}
+
+/* Preview table */
+.table-wrap{overflow:auto;border-radius:8px;border:1px solid var(--border);margin:20px 0;max-height:360px;}
+table.preview{width:100%;border-collapse:collapse;font-size:.78em;}
+table.preview th{
+  background:var(--bg3);color:var(--muted);padding:8px 12px;
+  font-family:'Rajdhani',sans-serif;font-weight:600;font-size:.95em;
+  text-align:left;position:sticky;top:0;border-bottom:2px solid var(--accent);
+  white-space:nowrap;
+}
+table.preview td{padding:6px 12px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;}
+table.preview tr:hover td{background:var(--bg3);}
+table.preview tr.dup td{background:rgba(255,85,102,.08);}
+table.preview tr.dup td:first-child{border-left:3px solid var(--danger);}
+table.preview tr.new td:first-child{border-left:3px solid var(--accent);}
+
+/* Log */
+.log{
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:16px;font-family:'JetBrains Mono',monospace;font-size:.78em;
+  max-height:180px;overflow-y:auto;color:var(--muted);
+}
+.log-line{margin-bottom:4px;}
+.log-line.ok{color:var(--accent);}
+.log-line.warn{color:#ffd166;}
+.log-line.err{color:var(--danger);}
+
+/* Options */
+.options{display:flex;gap:16px;margin:20px 0;flex-wrap:wrap;}
+.opt{
+  flex:1;background:var(--bg3);border:2px solid var(--border);border-radius:10px;
+  padding:16px;cursor:pointer;transition:all .2s;min-width:200px;
+}
+.opt:hover{border-color:var(--accent2);}
+.opt.selected{border-color:var(--accent);background:rgba(0,212,170,.07);}
+.opt-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.05em;margin-bottom:4px;}
+.opt-desc{font-size:.8em;color:var(--muted);}
+
+/* Progress */
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin:12px 0;}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s;}
+
+.section-title{
+  font-family:'Rajdhani',sans-serif;font-size:1.1em;font-weight:700;
+  color:var(--muted);text-transform:uppercase;letter-spacing:1px;
+  margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border);
+}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75em;font-weight:600;}
+.badge-new{background:rgba(0,212,170,.15);color:var(--accent);}
+.badge-dup{background:rgba(255,85,102,.15);color:var(--danger);}
+
+.hidden{display:none!important;}
+
+/* Download area */
+.download-box{
+  background:linear-gradient(135deg,rgba(0,212,170,.1),rgba(124,111,224,.1));
+  border:1px solid var(--accent);border-radius:12px;
+  padding:32px;text-align:center;margin:24px 0;
+}
+.download-box h3{font-family:'Rajdhani',sans-serif;font-size:1.4em;color:var(--accent);margin-bottom:8px;}
+.download-box p{color:var(--muted);font-size:.85em;margin-bottom:20px;}
+
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-logo">⚡ CONTROL TRÁFICO</span>
+  <span style="color:var(--muted);font-size:1.2em;">›</span>
+  <span style="font-family:'Rajdhani',sans-serif;font-weight:600;font-size:1.1em;">Importar Datos</span>
+  <a href="index.html" class="btn-back" style="margin-left:auto;">← Volver al dashboard</a>
+</div>
+
+<div class="container">
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step active" id="step1"><span class="step-num"><span class="step-num-inner">1</span></span>Subir archivo</div>
+    <div class="step" id="step2"><span class="step-num"><span class="step-num-inner">2</span></span>Revisar datos</div>
+    <div class="step" id="step3"><span class="step-num"><span class="step-num-inner">3</span></span>Combinar</div>
+    <div class="step" id="step4"><span class="step-num"><span class="step-num-inner">4</span></span>Descargar JSON</div>
+  </div>
+
+  <!-- PASO 1: Subir archivo -->
+  <div id="panel1">
+    <p class="section-title">Paso 1 — Subir Excel o CSV</p>
+    <div class="zone" id="dropZone">
+      <span class="zone-icon">📂</span>
+      <div class="zone-title">Arrastra tu archivo aquí</div>
+      <div class="zone-sub">O haz clic para seleccionarlo · Formatos: <strong>.xlsx · .xls · .csv</strong></div>
+      <button class="btn btn-primary" style="position:relative;z-index:2;pointer-events:none;">Seleccionar archivo</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    </div>
+
+    <p class="section-title" style="margin-top:32px;">También necesitas el JSON actual</p>
+    <div class="zone" id="dropZoneJson" style="padding:24px 32px;">
+      <span style="font-size:1.5em;display:block;margin-bottom:8px;">📄</span>
+      <div class="zone-title" style="font-size:1.1em;">resumen_full.json <span style="color:var(--muted);font-weight:400;font-size:.8em;">(opcional — para fusionar con datos existentes)</span></div>
+      <div class="zone-sub">Si no lo subes, el JSON descargado contendrá solo los datos nuevos</div>
+      <input type="file" id="jsonInput" accept=".json">
+    </div>
+  </div>
+
+  <!-- PASO 2: Revisar -->
+  <div id="panel2" class="hidden">
+    <p class="section-title">Paso 2 — Revisión de datos</p>
+    <div class="info-grid">
+      <div class="info-card"><div class="info-card-label">Filas en Excel</div><div class="info-card-val" id="statExcel">0</div></div>
+      <div class="info-card"><div class="info-card-label">Registros en JSON actual</div><div class="info-card-val" id="statJson">0</div></div>
+      <div class="info-card"><div class="info-card-label">Registros nuevos</div><div class="info-card-val" id="statNew">0</div></div>
+    </div>
+
+    <div class="options">
+      <div class="opt selected" id="optMerge" onclick="selOpt('merge')">
+        <div class="opt-title">🔀 Fusionar</div>
+        <div class="opt-desc">Añade los registros nuevos al JSON existente, evitando duplicados por Nº Aviso</div>
+      </div>
+      <div class="opt" id="optReplace" onclick="selOpt('replace')">
+        <div class="opt-title">🔄 Reemplazar</div>
+        <div class="opt-desc">El JSON descargado contendrá únicamente los datos del archivo subido</div>
+      </div>
+    </div>
+
+    <div id="dupWarning" class="hidden" style="background:rgba(255,85,102,.1);border:1px solid var(--danger);border-radius:8px;padding:12px 16px;margin:12px 0;font-size:.85em;color:#ff8899;">
+      ⚠️ Se detectaron <strong id="dupCount">0</strong> registros duplicados (mismo Nº Aviso). Se ignorarán automáticamente.
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-size:.85em;color:var(--muted);">Vista previa (primeras 50 filas del archivo nuevo)</span>
+      <div style="display:flex;gap:8px;">
+        <span class="badge badge-new">▏ Nuevo</span>
+        <span class="badge badge-dup">▏ Duplicado</span>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="preview" id="previewTable">
+        <thead id="previewHead"></thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:20px;">
+      <button class="btn btn-secondary" onclick="goStep(1)">← Atrás</button>
+      <button class="btn btn-primary" id="btnCombinar" onclick="combinar()">Combinar datos →</button>
+    </div>
+  </div>
+
+  <!-- PASO 3: Procesando -->
+  <div id="panel3" class="hidden">
+    <p class="section-title">Paso 3 — Combinando datos</p>
+    <div class="log" id="logBox"></div>
+    <div class="progress-bar" style="margin-top:16px;"><div class="progress-fill" id="progressFill3" style="width:0%"></div></div>
+  </div>
+
+  <!-- PASO 4: Descargar -->
+  <div id="panel4" class="hidden">
+    <div class="download-box">
+      <h3>✅ JSON generado correctamente</h3>
+      <p id="downloadSummary">Listo para descargar</p>
+      <button class="btn btn-primary" id="btnDownload" style="font-size:1em;padding:14px 32px;" onclick="descargarJSON()">
+        ⬇ Descargar resumen_full.json
+      </button>
+    </div>
+
+    <div class="log" id="logFinal"></div>
+
+    <div style="display:flex;gap:12px;margin-top:20px;">
+      <button class="btn btn-secondary" onclick="reiniciar()">↺ Importar otro archivo</button>
+      <a href="index.html" class="btn btn-primary">→ Ir al dashboard</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CAMPOS = ['FAMILIA','VHLO','CONDUCTOR','FAMILIA AVERIA','DEFICIENCIAS DETECTADAS',
+  'DESCRIPCION AVERIA','FOTO','FECHA AVISO','HORA','TURNO','Nº AVISO',
+  'AVISO ANTIGUO?','ORIGEN AVISO','TIPO ORDEN'];
+
+let datosExcel = [], datosJson = [], datosFinal = [], modoFusion = 'merge';
+
+// ── Drag & drop zona Excel ──
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+document.getElementById('fileInput').addEventListener('change', e => handleFile(e.target.files[0]));
+
+// ── Drag & drop zona JSON ──
+const dropZoneJson = document.getElementById('dropZoneJson');
+dropZoneJson.addEventListener('dragover', e => { e.preventDefault(); dropZoneJson.classList.add('drag-over'); });
+dropZoneJson.addEventListener('dragleave', () => dropZoneJson.classList.remove('drag-over'));
+dropZoneJson.addEventListener('drop', e => { e.preventDefault(); dropZoneJson.classList.remove('drag-over'); handleJson(e.dataTransfer.files[0]); });
+document.getElementById('jsonInput').addEventListener('change', e => handleJson(e.target.files[0]));
+
+function handleJson(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      datosJson = JSON.parse(ev.target.result);
+      dropZoneJson.style.borderColor = 'var(--accent)';
+      dropZoneJson.querySelector('.zone-title').innerHTML = `📄 ${file.name} <span style="color:var(--accent);font-size:.8em;">— ${datosJson.length.toLocaleString()} registros cargados ✓</span>`;
+    } catch(e) {
+      alert('Error al leer el JSON: ' + e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const reader = new FileReader();
+
+  reader.onload = ev => {
+    try {
+      let rows = [];
+      if (ext === 'csv') {
+        rows = parseCSV(ev.target.result);
+      } else {
+        const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws, { raw: false, dateNF: 'dd/mm/yyyy' });
+      }
+      datosExcel = normalizarDatos(rows);
+      mostrarPrevisualizacion(file.name);
+      goStep(2);
+    } catch(e) {
+      alert('Error al leer el archivo: ' + e.message);
+    }
+  };
+
+  if (ext === 'csv') reader.readAsText(file, 'UTF-8');
+  else reader.readAsArrayBuffer(file);
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const headers = lines[0].split(';').map(h => h.trim().replace(/"/g,''));
+  return lines.slice(1).map(line => {
+    const vals = line.split(';').map(v => v.trim().replace(/"/g,''));
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = vals[i] || '');
+    return obj;
+  });
+}
+
+function normalizarDatos(rows) {
+  return rows.map(row => {
+    const obj = {};
+    CAMPOS.forEach(campo => {
+      // Buscar el campo ignorando tildes y mayúsculas
+      const key = Object.keys(row).find(k =>
+        k.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim() ===
+        campo.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim()
+      );
+      let val = key ? row[key] : '';
+      // Normalizar fecha
+      if (campo === 'FECHA AVISO' && val) {
+        val = normalizarFecha(val);
+      }
+      // Normalizar Nº AVISO como string
+      if (campo === 'Nº AVISO' && val) val = val.toString().trim();
+      obj[campo] = val !== undefined && val !== null ? val.toString().trim() : '';
+    });
+    return obj;
+  }).filter(r => r['VHLO'] && r['VHLO'] !== '');
+}
+
+function normalizarFecha(val) {
+  if (!val) return '';
+  // Si ya es dd/mm/yyyy
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) return val;
+  // Si es yyyy-mm-dd o similar
+  const d = new Date(val);
+  if (!isNaN(d)) {
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  return val;
+}
+
+function mostrarPrevisualizacion(filename) {
+  // Calcular duplicados por Nº AVISO
+  const avisosJson = new Set(datosJson.map(r => r['Nº AVISO'] ? r['Nº AVISO'].toString().trim() : '').filter(Boolean));
+  let dups = 0;
+  datosExcel.forEach(r => {
+    if (r['Nº AVISO'] && avisosJson.has(r['Nº AVISO'].toString().trim())) dups++;
+  });
+  const nuevos = datosExcel.length - dups;
+
+  document.getElementById('statExcel').textContent = datosExcel.length.toLocaleString();
+  document.getElementById('statJson').textContent = datosJson.length.toLocaleString();
+  document.getElementById('statNew').textContent = nuevos.toLocaleString();
+  document.getElementById('progressFill').style.width = '100%';
+
+  if (dups > 0) {
+    document.getElementById('dupWarning').classList.remove('hidden');
+    document.getElementById('dupCount').textContent = dups;
+  }
+
+  // Tabla preview
+  const head = document.getElementById('previewHead');
+  const body = document.getElementById('previewBody');
+  head.innerHTML = '<tr>' + CAMPOS.map(c => `<th>${c}</th>`).join('') + '</tr>';
+  body.innerHTML = '';
+
+  datosExcel.slice(0, 50).forEach(row => {
+    const isDup = row['Nº AVISO'] && avisosJson.has(row['Nº AVISO'].toString().trim());
+    const tr = document.createElement('tr');
+    tr.className = isDup ? 'dup' : 'new';
+    CAMPOS.forEach(c => {
+      const td = document.createElement('td');
+      td.textContent = row[c] || '—';
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+}
+
+function selOpt(modo) {
+  modoFusion = modo;
+  document.getElementById('optMerge').classList.toggle('selected', modo === 'merge');
+  document.getElementById('optReplace').classList.toggle('selected', modo === 'replace');
+}
+
+function combinar() {
+  goStep(3);
+  const log = document.getElementById('logBox');
+  const prog = document.getElementById('progressFill3');
+
+  function addLog(msg, tipo='') {
+    const div = document.createElement('div');
+    div.className = 'log-line ' + tipo;
+    div.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  setTimeout(() => {
+    addLog(`Procesando ${datosExcel.length} registros del archivo...`);
+    prog.style.width = '20%';
+
+    setTimeout(() => {
+      if (modoFusion === 'replace') {
+        datosFinal = datosExcel;
+        addLog(`Modo reemplazar: ${datosFinal.length} registros totales.`, 'ok');
+        prog.style.width = '80%';
+      } else {
+        const avisosJson = new Set(datosJson.map(r => r['Nº AVISO'] ? r['Nº AVISO'].toString().trim() : '').filter(Boolean));
+        const nuevos = datosExcel.filter(r => !r['Nº AVISO'] || !avisosJson.has(r['Nº AVISO'].toString().trim()));
+        const dups = datosExcel.length - nuevos.length;
+        addLog(`JSON existente: ${datosJson.length} registros.`);
+        addLog(`Nuevos registros a añadir: ${nuevos.length}.`);
+        if (dups > 0) addLog(`Duplicados ignorados: ${dups}.`, 'warn');
+        datosFinal = [...datosJson, ...nuevos];
+        prog.style.width = '80%';
+      }
+
+      setTimeout(() => {
+        addLog(`Total registros en JSON final: ${datosFinal.length}.`, 'ok');
+        prog.style.width = '100%';
+        document.getElementById('downloadSummary').textContent =
+          `${datosFinal.length.toLocaleString()} registros · Modo: ${modoFusion === 'merge' ? 'Fusionado' : 'Reemplazado'}`;
+        const logFinal = document.getElementById('logFinal');
+        logFinal.innerHTML = log.innerHTML;
+        setTimeout(() => goStep(4), 400);
+      }, 600);
+    }, 800);
+  }, 100);
+}
+
+function descargarJSON() {
+  const json = JSON.stringify(datosFinal, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'resumen_full.json';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function goStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('panel'+i).classList.toggle('hidden', i !== n);
+    const s = document.getElementById('step'+i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    else if (i === n) s.classList.add('active');
+  });
+}
+
+function reiniciar() {
+  datosExcel=[]; datosJson=[]; datosFinal=[];
+  document.getElementById('fileInput').value='';
+  document.getElementById('jsonInput').value='';
+  document.getElementById('dupWarning').classList.add('hidden');
+  document.getElementById('logBox').innerHTML='';
+  document.getElementById('progressFill').style.width='0%';
+  document.getElementById('progressFill3').style.width='0%';
+  dropZoneJson.style.borderColor='';
+  dropZoneJson.querySelector('.zone-title').innerHTML='📄 resumen_full.json <span style="color:var(--muted);font-weight:400;font-size:.8em;">(opcional — para fusionar con datos existentes)</span>';
+  selOpt('merge');
+  goStep(1);
+}
+</script>
+</body>
+</html>

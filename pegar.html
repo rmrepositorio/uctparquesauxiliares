@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pegar Datos — Control Tráfico</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap');
+
+:root {
+  --bg:#0f0f1a; --bg2:#171728; --bg3:#1e1e35;
+  --accent:#00d4aa; --accent2:#7c6fe0; --danger:#ff5566;
+  --text:#e0e0f0; --muted:#6666aa; --border:#2a2a45;
+  --shadow:0 8px 32px rgba(0,0,0,0.5);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;gap:12px;}
+.header-logo{font-family:'Rajdhani',sans-serif;font-size:1.4em;font-weight:700;color:var(--accent);letter-spacing:2px;}
+.btn-back{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;text-decoration:none;margin-left:auto;transition:all .2s;}
+.btn-back:hover{border-color:var(--accent);color:var(--accent);}
+
+.container{max-width:1200px;margin:0 auto;padding:28px 32px;}
+
+.steps{display:flex;gap:0;margin-bottom:32px;}
+.step{flex:1;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);font-size:.8em;color:var(--muted);transition:all .3s;}
+.step:first-child{border-radius:8px 0 0 8px;}
+.step:last-child{border-radius:0 8px 8px 0;}
+.step.active{background:var(--bg3);border-color:var(--accent);color:var(--text);}
+.step.done{border-color:var(--accent);color:var(--accent);}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.95em;margin-right:7px;transition:all .3s;}
+.step.active .step-num{background:var(--accent);color:var(--bg);}
+.step.done .step-num{background:var(--accent);color:var(--bg);}
+
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .2s;font-family:'Inter',sans-serif;}
+.btn-primary{background:var(--accent);color:var(--bg);}
+.btn-primary:hover{opacity:.85;transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Zona de pegado */
+.paste-zone{
+  border:2px dashed var(--border);border-radius:12px;
+  background:var(--bg2);padding:0;
+  transition:border-color .3s;overflow:hidden;
+}
+.paste-zone.has-data{border-color:var(--accent);border-style:solid;}
+.paste-zone.focusing{border-color:var(--accent2);}
+
+.paste-hint{
+  padding:48px 32px;text-align:center;
+}
+.paste-hint-icon{font-size:3em;margin-bottom:12px;display:block;}
+.paste-hint h2{font-family:'Rajdhani',sans-serif;font-size:1.5em;font-weight:700;margin-bottom:8px;}
+.paste-hint p{color:var(--muted);font-size:.9em;margin-bottom:20px;}
+.shortcut{display:inline-block;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:1em;color:var(--accent);letter-spacing:2px;}
+
+/* Área textarea oculta para capturar pegado */
+#pasteCapture{
+  position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;
+}
+
+/* Preview tabla */
+.preview-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border);
+}
+.preview-title{font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--accent);font-size:1em;text-transform:uppercase;letter-spacing:.5px;}
+.preview-wrap{overflow:auto;max-height:340px;}
+table.ptable{width:100%;border-collapse:collapse;font-size:.78em;}
+table.ptable th{background:var(--bg3);color:var(--muted);padding:8px 12px;font-family:'Rajdhani',sans-serif;font-weight:600;text-align:left;position:sticky;top:0;border-bottom:2px solid var(--accent);white-space:nowrap;}
+table.ptable td{padding:6px 12px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;}
+table.ptable tr.dup td{background:rgba(255,85,102,.08);}
+table.ptable tr.dup td:first-child{border-left:3px solid var(--danger);}
+table.ptable tr.new td:first-child{border-left:3px solid var(--accent);}
+table.ptable tr:hover td{background:var(--bg3);}
+
+/* Stats */
+.stats{display:flex;gap:12px;margin:20px 0;}
+.stat{flex:1;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:14px 16px;text-align:center;}
+.stat-label{font-size:.75em;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.stat-val{font-family:'Rajdhani',sans-serif;font-size:1.8em;font-weight:700;color:var(--accent);}
+
+/* JSON zone */
+.json-zone{
+  border:2px dashed var(--border);border-radius:10px;padding:20px 24px;
+  background:var(--bg2);cursor:pointer;transition:all .2s;position:relative;text-align:center;
+}
+.json-zone:hover,.json-zone.drag-over{border-color:var(--accent);background:var(--bg3);}
+.json-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.json-zone.loaded{border-color:var(--accent);border-style:solid;}
+
+/* Options */
+.opt-row{display:flex;gap:12px;margin:16px 0;}
+.opt{flex:1;background:var(--bg3);border:2px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .2s;}
+.opt:hover{border-color:var(--accent2);}
+.opt.selected{border-color:var(--accent);background:rgba(0,212,170,.07);}
+.opt-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1em;margin-bottom:3px;}
+.opt-desc{font-size:.78em;color:var(--muted);}
+
+.warn{background:rgba(255,85,102,.1);border:1px solid var(--danger);border-radius:8px;padding:10px 14px;font-size:.82em;color:#ff8899;margin:10px 0;}
+.section-title{font-family:'Rajdhani',sans-serif;font-size:.9em;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+
+.download-box{background:linear-gradient(135deg,rgba(0,212,170,.1),rgba(124,111,224,.1));border:1px solid var(--accent);border-radius:12px;padding:32px;text-align:center;margin:20px 0;}
+.download-box h3{font-family:'Rajdhani',sans-serif;font-size:1.4em;color:var(--accent);margin-bottom:8px;}
+.download-box p{color:var(--muted);font-size:.85em;margin-bottom:20px;}
+
+.hidden{display:none!important;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-logo">⚡ CONTROL TRÁFICO</span>
+  <span style="color:var(--muted);font-size:1.2em;">›</span>
+  <span style="font-family:'Rajdhani',sans-serif;font-weight:600;font-size:1.1em;">Pegar desde Excel</span>
+  <a href="importar.html" class="btn-back" style="margin-right:8px;">📂 Importar archivo</a>
+  <a href="index.html" class="btn-back">← Dashboard</a>
+</div>
+
+<div class="container">
+
+  <div class="steps">
+    <div class="step active" id="step1"><span class="step-num">1</span>Pegar datos</div>
+    <div class="step" id="step2"><span class="step-num">2</span>Revisar</div>
+    <div class="step" id="step3"><span class="step-num">3</span>Descargar JSON</div>
+  </div>
+
+  <!-- PASO 1 -->
+  <div id="panel1">
+    <div class="paste-zone" id="pasteZone" onclick="document.getElementById('pasteArea').focus()">
+      <div class="paste-hint">
+        <span class="paste-hint-icon">📋</span>
+        <h2>Pega los datos de Excel aquí</h2>
+        <p>Selecciona las celdas en Excel (incluyendo la fila de cabecera) y pulsa</p>
+        <span class="shortcut">Ctrl + V</span>
+      </div>
+      <textarea
+        id="pasteArea"
+        placeholder="Haz clic aquí y luego Ctrl+V..."
+        style="
+          width:100%;min-height:120px;resize:vertical;
+          background:var(--bg3);color:var(--text);
+          border:none;border-top:1px solid var(--border);
+          padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:.78em;
+          outline:none;display:block;
+        "
+      ></textarea>
+      <div style="padding:10px 16px;display:flex;justify-content:flex-end;">
+        <button class="btn btn-primary" onclick="procesarDesdeTextarea()">Procesar datos →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 2 -->
+  <div id="panel2" class="hidden">
+
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Filas pegadas</div><div class="stat-val" id="statPegadas">0</div></div>
+      <div class="stat"><div class="stat-label">Filas válidas</div><div class="stat-val" id="statValidas">0</div></div>
+      <div class="stat"><div class="stat-label">Registros en JSON</div><div class="stat-val" id="statJson">0</div></div>
+      <div class="stat"><div class="stat-label">Nuevos registros</div><div class="stat-val" id="statNuevos">0</div></div>
+    </div>
+
+    <div id="dupWarn" class="warn hidden">
+      ⚠️ <strong id="dupCount">0</strong> registros ya existen en el JSON (mismo Nº Aviso) y serán ignorados.
+    </div>
+
+    <div class="paste-zone has-data" style="margin-bottom:16px;">
+      <div class="preview-header">
+        <span class="preview-title">Vista previa de datos pegados</span>
+        <button class="btn btn-secondary" style="font-size:11px;padding:5px 12px;" onclick="reiniciar()">✕ Borrar y volver a pegar</button>
+      </div>
+      <div class="preview-wrap">
+        <table class="ptable"><thead id="previewHead"></thead><tbody id="previewBody"></tbody></table>
+      </div>
+    </div>
+
+    <p class="section-title">JSON actual (opcional)</p>
+    <div class="json-zone" id="jsonZone">
+      <div style="font-size:1.5em;margin-bottom:6px;">📄</div>
+      <div style="font-family:'Rajdhani',sans-serif;font-weight:600;">resumen_full.json</div>
+      <div style="font-size:.8em;color:var(--muted);margin-top:4px;">Arrastra o haz clic para cargar — necesario para fusionar con datos existentes</div>
+      <input type="file" id="jsonInput" accept=".json">
+    </div>
+
+    <div class="opt-row">
+      <div class="opt selected" id="optMerge" onclick="selOpt('merge')">
+        <div class="opt-title">🔀 Fusionar</div>
+        <div class="opt-desc">Añade solo los registros nuevos al JSON existente, sin duplicados</div>
+      </div>
+      <div class="opt" id="optReplace" onclick="selOpt('replace')">
+        <div class="opt-title">🔄 Reemplazar</div>
+        <div class="opt-desc">El JSON contendrá únicamente los datos que acabas de pegar</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:20px;">
+      <button class="btn btn-secondary" onclick="reiniciar()">← Volver a pegar</button>
+      <button class="btn btn-primary" onclick="generar()">Generar JSON →</button>
+    </div>
+  </div>
+
+  <!-- PASO 3 -->
+  <div id="panel3" class="hidden">
+    <div class="download-box">
+      <h3>✅ JSON generado</h3>
+      <p id="dlSummary"></p>
+      <button class="btn btn-primary" style="font-size:1em;padding:14px 32px;" onclick="descargar()">⬇ Descargar resumen_full.json</button>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:16px;">
+      <button class="btn btn-secondary" onclick="reiniciar()">↺ Pegar nuevos datos</button>
+      <a href="index.html" class="btn btn-primary">→ Ir al dashboard</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CAMPOS = ['FAMILIA','VHLO','CONDUCTOR','FAMILIA AVERIA','DEFICIENCIAS DETECTADAS',
+  'DESCRIPCION AVERIA','FOTO','FECHA AVISO','HORA','TURNO','Nº AVISO',
+  'AVISO ANTIGUO?','ORIGEN AVISO','TIPO ORDEN'];
+
+let datosPegados = [], datosJson = [], datosFinal = [], modo = 'merge';
+
+// ── Auto-procesar al pegar en el textarea ──
+document.getElementById('pasteArea').addEventListener('paste', e => {
+  // Pequeño delay para que el textarea tenga el contenido
+  setTimeout(() => {
+    const txt = document.getElementById('pasteArea').value;
+    if (txt.trim()) procesarTexto(txt);
+  }, 50);
+});
+
+function procesarDesdeTextarea() {
+  const txt = document.getElementById('pasteArea').value;
+  if (!txt.trim()) { alert('Primero pega los datos copiados de Excel (Ctrl+V dentro del área de texto)'); return; }
+  procesarTexto(txt);
+}
+
+function procesarTexto(txt) {
+  const lineas = txt.split('\n').map(l => l.trimEnd()).filter(l => l.trim());
+  if (lineas.length < 2) { alert('No se detectaron suficientes filas. Asegúrate de copiar también la cabecera.'); return; }
+
+  // Detectar separador (tab o punto y coma)
+  const sep = lineas[0].includes('\t') ? '\t' : ';';
+  const headers = lineas[0].split(sep).map(h => h.trim().replace(/"/g,''));
+  const rows = lineas.slice(1).map(l => {
+    const vals = l.split(sep).map(v => v.trim().replace(/"/g,''));
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = vals[i] !== undefined ? vals[i] : '');
+    return obj;
+  });
+
+  datosPegados = normalizarDatos(rows);
+  mostrarPreview();
+  goStep(2);
+}
+
+function normalizarDatos(rows) {
+  return rows.map(row => {
+    const obj = {};
+    CAMPOS.forEach(campo => {
+      const key = Object.keys(row).find(k =>
+        norm(k) === norm(campo)
+      );
+      let val = key !== undefined ? (row[key] || '') : '';
+      if (campo === 'FECHA AVISO' && val) val = normFecha(val);
+      if (campo === 'Nº AVISO' && val) val = val.toString().trim();
+      obj[campo] = val.toString().trim();
+    });
+    return obj;
+  }).filter(r => r['VHLO'] && r['VHLO'].trim() !== '');
+}
+
+function norm(s) {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim();
+}
+
+function normFecha(val) {
+  if (!val) return '';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) return val;
+  const d = new Date(val);
+  if (!isNaN(d)) return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  return val;
+}
+
+function mostrarPreview() {
+  const avisosJson = new Set(datosJson.map(r => (r['Nº AVISO']||'').toString().trim()).filter(Boolean));
+  let dups = 0;
+  datosPegados.forEach(r => { if (r['Nº AVISO'] && avisosJson.has(r['Nº AVISO'])) dups++; });
+
+  document.getElementById('statPegadas').textContent = datosPegados.length;
+  document.getElementById('statValidas').textContent = datosPegados.length;
+  document.getElementById('statJson').textContent = datosJson.length;
+  document.getElementById('statNuevos').textContent = datosPegados.length - dups;
+
+  if (dups > 0) { document.getElementById('dupWarn').classList.remove('hidden'); document.getElementById('dupCount').textContent = dups; }
+  else document.getElementById('dupWarn').classList.add('hidden');
+
+  const head = document.getElementById('previewHead');
+  const body = document.getElementById('previewBody');
+  head.innerHTML = '<tr>' + CAMPOS.map(c => `<th>${c}</th>`).join('') + '</tr>';
+  body.innerHTML = '';
+  datosPegados.slice(0, 100).forEach(row => {
+    const isDup = row['Nº AVISO'] && avisosJson.has(row['Nº AVISO']);
+    const tr = document.createElement('tr');
+    tr.className = isDup ? 'dup' : 'new';
+    CAMPOS.forEach(c => { const td = document.createElement('td'); td.textContent = row[c] || '—'; tr.appendChild(td); });
+    body.appendChild(tr);
+  });
+}
+
+// JSON drag & drop
+const jz = document.getElementById('jsonZone');
+jz.addEventListener('dragover', e => { e.preventDefault(); jz.classList.add('drag-over'); });
+jz.addEventListener('dragleave', () => jz.classList.remove('drag-over'));
+jz.addEventListener('drop', e => { e.preventDefault(); jz.classList.remove('drag-over'); cargarJson(e.dataTransfer.files[0]); });
+document.getElementById('jsonInput').addEventListener('change', e => cargarJson(e.target.files[0]));
+
+function cargarJson(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      datosJson = JSON.parse(ev.target.result);
+      jz.classList.add('loaded');
+      jz.querySelector('div:nth-child(2)').textContent = `✓ ${file.name}`;
+      jz.querySelector('div:nth-child(3)').textContent = `${datosJson.length.toLocaleString()} registros cargados`;
+      mostrarPreview(); // recalcular stats y duplicados
+    } catch(e) { alert('Error al leer JSON: ' + e.message); }
+  };
+  r.readAsText(file);
+}
+
+function selOpt(m) {
+  modo = m;
+  document.getElementById('optMerge').classList.toggle('selected', m === 'merge');
+  document.getElementById('optReplace').classList.toggle('selected', m === 'replace');
+}
+
+function generar() {
+  if (modo === 'replace') {
+    datosFinal = datosPegados;
+  } else {
+    const avisosJson = new Set(datosJson.map(r => (r['Nº AVISO']||'').toString().trim()).filter(Boolean));
+    const nuevos = datosPegados.filter(r => !r['Nº AVISO'] || !avisosJson.has(r['Nº AVISO']));
+    datosFinal = [...datosJson, ...nuevos];
+  }
+  document.getElementById('dlSummary').textContent =
+    `${datosFinal.length.toLocaleString()} registros totales · ${modo === 'merge' ? 'Fusionado' : 'Reemplazado'}`;
+  goStep(3);
+}
+
+function descargar() {
+  const blob = new Blob([JSON.stringify(datosFinal, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'resumen_full.json';
+  a.click();
+}
+
+function goStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('panel'+i).classList.toggle('hidden', i !== n);
+    const s = document.getElementById('step'+i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    else if (i === n) s.classList.add('active');
+  });
+}
+
+function reiniciar() {
+  datosPegados = []; datosFinal = [];
+  document.getElementById('previewHead').innerHTML = '';
+  document.getElementById('previewBody').innerHTML = '';
+  goStep(1);
+}
+</script>
+</body>
+</html>

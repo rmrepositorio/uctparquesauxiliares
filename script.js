@@ -95,7 +95,7 @@ function abrirMenuExcl(campo, valores, anchorEl){
   const excAct=exclusiones[campo]||new Set();
   valores.forEach(val=>{
     const row=document.createElement('label'); row.className='excl-row';
-    const cb=document.createElement('input'); cb.type='checkbox'; cb.value=val; cb.checked=!excAct.has(val);
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.value=strip(val); cb.checked=!excAct.has(val);
     const sp=document.createElement('span'); sp.textContent=val;
     row.appendChild(cb); row.appendChild(sp); lista.appendChild(row);
   });
@@ -300,35 +300,7 @@ function crearGraficos(){
     btn.addEventListener('click',e=>{
       e.stopPropagation();
       const campo=btn.dataset.campo;
-      const vals=[...new Set(window.dataTabla.map(d=>d[campo]?d[campo].toString().trim().toUpperCase():null).filter(v=>v&&v!=='****'))].sort();
-      abrirMenuExcl(campo,vals,btn);
-    });
-  });
-}
-
-// ── Tabla ──
-function inicializarTabla(){
-  $('#tablaAverias thead').clone(true).appendTo('#tablaAverias thead');
-  $('#tablaAverias thead tr:eq(1) th').each(function(i){
-    const title=$(this).text();
-    $(this).html(`<input type="text" placeholder="${title}" style="width:100%;font-size:11px;padding:2px 4px;background:var(--input-bg);color:var(--input-text);border:1px solid var(--border);border-radius:3px;" />`);
-    $('input',this).on('keyup change',function(){ if(tablaDT.column(i).search()!==this.value) tablaDT.column(i).search(this.value).draw(); });
-  });
-
-  tablaDT=$('#tablaAverias').DataTable({
-    data:[],
-    columns:[
-      {title:'Vehículo',      data:'VHLO',                   width:'80px'},
-      {title:'Familia Veh.',  data:'FAMILIA',                width:'110px'},
-      {title:'Familia Avería',data:'FAMILIA AVERIA',         width:'130px'},
-      {title:'Descripción',   data:null,                     width:'220px', defaultContent:'-',
-        render:function(d,t,row){
-          // Buscar campo descripcion con cualquier variante de nombre
-          for(const k of Object.keys(row)){
-            // Normalizar: quitar tildes, caracteres especiales, pasar a mayúsculas
-            const kn=k.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z ]/g,'').trim();
-            if(kn==='DESCRIPCION AVERIA'||kn==='DESCRIPCION'){
-              const v=row[k];
+      const vals=[...new Set(window.dataTabla.map(d=>d[campo]?strip(d[campo]):null).filter(v=>v&&v!=='****'))].sort();
               if(v&&v.toString().trim()) return `<span title="${v}" style="display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${v}</span>`;
             }
           }
@@ -430,7 +402,7 @@ function actualizarGraficos(){
   [{key:'familia',campo:'FAMILIA AVERIA'},{key:'origen',campo:'ORIGEN AVISO'},{key:'familiaVeh',campo:'FAMILIA'},{key:'vhlo',campo:'VHLO'}]
   .forEach(({key,campo})=>{
     const cnt={};
-    datos.forEach(d=>{ const v=d[campo]; if(v&&v!=='****'){ const vn=v.toString().trim().toUpperCase(); cnt[vn]=(cnt[vn]||0)+1; } });
+    datos.forEach(d=>{ const v=d[campo]; if(v&&v!=='****'){ const vn = strip(v); cnt[vn]=(cnt[vn]||0)+1; } });
     const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
     const labels=sorted.map(e=>e[0]), values=sorted.map(e=>e[1]), cols=genColores(labels.length);
     const fv=filtrosActivos[campo] ? filtrosActivos[campo].toString().trim().toUpperCase() : null;

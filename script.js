@@ -414,14 +414,15 @@ function inicializarTabla(){
 function actualizarGraficos(){
   const fi=document.getElementById('fechaInicio').valueAsDate;
   const ff=document.getElementById('fechaFin').valueAsDate;
+  const normStr=s=>s.toString().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
 
   let datos=window.dataTabla.filter(d=>{
     if(!d.fechaJS || isNaN(d.fechaJS)) return false;
     if(!fi || !ff) return true; // sin rango = mostrar todo
     return cmpFecha(d.fechaJS,fi)>=0 && cmpFecha(d.fechaJS,ff)<=0;
   });
-  for(const k in filtrosActivos){ if(filtrosActivos[k] && k!=='_DESCRIPCION_NORM') datos=datos.filter(d=>d[k] && d[k].toString().trim().toUpperCase()===filtrosActivos[k].toString().trim().toUpperCase()); }
-  for(const k in exclusiones){ const ex=exclusiones[k]; if(ex.size) datos=datos.filter(d=>{ const v=d[k]?d[k].toString().trim().toUpperCase():''; return !ex.has(v); }); }
+  for(const k in filtrosActivos){ if(filtrosActivos[k] && k!=='_DESCRIPCION_NORM') datos=datos.filter(d=>d[k] && normStr(d[k])===normStr(filtrosActivos[k])); }
+  for(const k in exclusiones){ const ex=exclusiones[k]; if(ex.size) datos=datos.filter(d=>{ const v=d[k]?normStr(d[k]):''; return !ex.has(v); }); }
   // Excluir siempre registros sin vehículo
   datos=datos.filter(d=>d.VHLO && d.VHLO.toString().trim()!=="");
   // Filtro por descripción avería
@@ -430,10 +431,10 @@ function actualizarGraficos(){
   [{key:'familia',campo:'FAMILIA AVERIA'},{key:'origen',campo:'ORIGEN AVISO'},{key:'familiaVeh',campo:'FAMILIA'},{key:'vhlo',campo:'VHLO'}]
   .forEach(({key,campo})=>{
     const cnt={};
-    datos.forEach(d=>{ const v=d[campo]; if(v&&v!=='****'){ const vn=v.toString().trim().toUpperCase(); cnt[vn]=(cnt[vn]||0)+1; } });
+    datos.forEach(d=>{ const v=d[campo]; if(v&&v!=='****'){ const vn=normStr(v); cnt[vn]=(cnt[vn]||0)+1; } });
     const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
     const labels=sorted.map(e=>e[0]), values=sorted.map(e=>e[1]), cols=genColores(labels.length);
-    const fv=filtrosActivos[campo] ? filtrosActivos[campo].toString().trim().toUpperCase() : null;
+    const fv=filtrosActivos[campo] ? normStr(filtrosActivos[campo]) : null;
     const bg=labels.map((l,i)=>fv&&l!==fv?cols[i]+'55':cols[i]);
     const c=charts[key];
     c.data.labels=labels; c.data.datasets[0].data=values; c.data.datasets[0].backgroundColor=bg;

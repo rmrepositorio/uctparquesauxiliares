@@ -2,29 +2,42 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Parque Central - Dashboard Control Tráfico</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parques Auxiliares - Dashboard Control Trafico</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReorder.dataTables.min.css">
+<script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/colresizable/1.6.0/colResizable-1.6.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="header">
-  <h1>🚗⚡PARQUE CENTRAL - Unidad Control Tráfico</h1>
-  <a href="incidencias.html" class="btn-nav">📄 Listado Averias</a>
-  <a href="pegar.html" class="btn-nav">📥 Pegar Datos</a>
-  <a href="resumen_vehiculos.html" class="btn-nav">📊 Tabla Resumen</a>
+  <h1>🚗⚡PARQUES AUXILIARES - Unidad Control Tráfico</h1>
+  <a href="pegar.html" 
+   style="color: var(--accent); font-weight: 700; text-decoration: none; margin-right: 10px;">
+   📥 Pegar Datos
+</a>
+
+<a href="" 
+   style="color: var(--accent); font-weight: 700; text-decoration: none; margin-right: 10px;">
+   📊 Tabla Resumen
+</a>
+  <button id="btnAtras" disabled>◀ Atrás</button>
+  <button id="btnAdelante" disabled>Adelante ▶</button>
+  <button id="btnLimpiar">✕ Limpiar filtros</button>
+  <button id="toggleModo">☀ Modo claro</button>
 </div>
 
 <div class="controls">
-  <button id="btnAtras">◀ Atrás</button>
-  <button id="btnAdelante">Adelante ▶</button>
-  <button id="btnLimpiar">✕ Limpiar filtros</button>
-  <button id="toggleModo">☀ Modo claro</button>
   <label>Fecha inicio: <input type="date" id="fechaInicio"></label>
   <label>Fecha fin: <input type="date" id="fechaFin"></label>
-  <div class="filtros-activos" id="filtrosActivos"></div>
 </div>
+
+<div class="filtros-activos" id="filtrosActivos"></div>
 
 <div class="kpi-container">
   <div class="kpi">Total averías<span id="totalAverias">0</span></div>
@@ -34,183 +47,93 @@
 
 <div class="charts-wrapper">
 
-  <!-- Fila 1: Familia Avería + Turno -->
-  <div class="chart-row">
-    <div class="chart-panel" id="panelFamilia">
+  <div class="chart-row" id="row-1">
+    <div class="chart-panel" id="panel-familia">
       <div class="panel-header">
-        <div class="panel-title">Familia Avería</div>
+        <span class="panel-title">Familia Avería</span>
         <button class="btn-filtro-panel" data-campo="FAMILIA AVERIA">⊟</button>
       </div>
       <canvas id="graficoFamilia"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
+      <div class="resize-handle" data-panel="panel-familia"></div>
+      <div class="resize-handle-e" data-panel="panel-familia" data-row="row-1"></div>
+      <div class="resize-handle-se" data-panel="panel-familia" data-row="row-1"></div>
     </div>
-    <div class="chart-panel" id="panelTurno">
+    <div class="chart-panel" id="panel-turno">
       <div class="panel-header">
-        <div class="panel-title">Turno</div>
+        <span class="panel-title">Turno</span>
         <button class="btn-filtro-panel" data-campo="TURNO">⊟</button>
       </div>
       <canvas id="graficoTurno"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
+      <div class="resize-handle" data-panel="panel-turno"></div>
+      <div class="resize-handle-e" data-panel="panel-turno" data-row="row-1"></div>
+      <div class="resize-handle-se" data-panel="panel-turno" data-row="row-1"></div>
     </div>
   </div>
 
-  <!-- Fila 2: Origen Aviso + TIPO DE ORDEN (NUEVO) -->
-  <div class="chart-row">
-    <div class="chart-panel" id="panelOrigen">
+  <div class="chart-row" id="row-2">
+    <div class="chart-panel" id="panel-origen">
       <div class="panel-header">
-        <div class="panel-title">Origen Aviso</div>
+        <span class="panel-title">Origen Aviso</span>
         <button class="btn-filtro-panel" data-campo="ORIGEN AVISO">⊟</button>
       </div>
       <canvas id="graficoOrigen"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
+      <div class="resize-handle" data-panel="panel-origen"></div>
+      <div class="resize-handle-e" data-panel="panel-origen" data-row="row-2"></div>
+      <div class="resize-handle-se" data-panel="panel-origen" data-row="row-2"></div>
     </div>
-    <div class="chart-panel" id="panelTipoOrden">
+    <div class="chart-panel" id="panel-familiaVeh">
       <div class="panel-header">
-        <div class="panel-title">Tipo de Orden</div>
-        <button class="btn-filtro-panel" data-campo="TIPO ORDEN">⊟</button>
-      </div>
-      <canvas id="graficoTipoOrden"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
-    </div>
-  </div>
-
-  <!-- Fila 3: Familia Vehículo + RECURRENCIA (NUEVO) -->
-  <div class="chart-row">
-    <div class="chart-panel" id="panelFamiliaVeh">
-      <div class="panel-header">
-        <div class="panel-title">Familia Vehículo</div>
+        <span class="panel-title">Familia Vehículo</span>
         <button class="btn-filtro-panel" data-campo="FAMILIA">⊟</button>
       </div>
       <canvas id="graficoFamiliaVeh"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
-    </div>
-    <div class="chart-panel" id="panelRecurrencia">
-      <div class="panel-header">
-        <div class="panel-title">Tasa de Recurrencia</div>
-      </div>
-      <canvas id="graficoRecurrencia"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
+      <div class="resize-handle" data-panel="panel-familiaVeh"></div>
+      <div class="resize-handle-e" data-panel="panel-familiaVeh" data-row="row-2"></div>
+      <div class="resize-handle-se" data-panel="panel-familiaVeh" data-row="row-2"></div>
     </div>
   </div>
 
-  <!-- Fila 4: VHLO + Descripción -->
-  <div class="chart-row">
-    <div class="chart-panel" id="panelVHLO">
+  <div class="chart-row" id="row-3">
+    <div class="chart-panel wide" id="panel-vhlo">
       <div class="panel-header">
-        <div class="panel-title">Vehículo (VHLO)</div>
+        <span class="panel-title">Vehículo (VHLO)</span>
         <button class="btn-filtro-panel" data-campo="VHLO">⊟</button>
       </div>
       <canvas id="graficoVHLO"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
+      <div class="resize-handle" data-panel="panel-vhlo"></div>
     </div>
-    <div class="chart-panel" id="panelDescripcion">
+  </div>
+
+  <div class="chart-row" id="row-4">
+    <div class="chart-panel wide" id="panel-descripcion">
       <div class="panel-header">
-        <div class="panel-title">Ranking Descripción Avería</div>
+        <span class="panel-title">Ranking Descripción Avería</span>
+        <button class="btn-filtro-panel" data-campo="_DESCRIPCION_NORM">⊟</button>
       </div>
       <canvas id="graficoDescripcion"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
+      <div class="resize-handle" data-panel="panel-descripcion"></div>
     </div>
   </div>
 
-  <!-- Fila 5: Carga Trasera + Carga Lateral -->
-  <div class="chart-row">
-    <div class="chart-panel" id="panelCargaTrasera">
+  <div class="chart-row" id="row-5">
+    <div class="chart-panel wide" id="panel-evolucion">
       <div class="panel-header">
-        <div class="panel-title">Carga Trasera — Subfamilias</div>
-      </div>
-      <canvas id="graficoCargaTrasera"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
-    </div>
-    <div class="chart-panel" id="panelCargaLateral">
-      <div class="panel-header">
-        <div class="panel-title">Carga Lateral — Subfamilias</div>
-      </div>
-      <canvas id="graficoCargaLateral"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
-    </div>
-  </div>
-
-  <!-- Fila 6: Tablas resumen subfamilias -->
-  <div class="chart-row">
-    <div class="subfam-table-wrap">
-      <div class="subfam-table-title">📊 Media incidencias/vehículo — Carga Trasera</div>
-      <table class="subfam-table" id="tabla-trasera">
-        <thead><tr><th>Subfamilia</th><th>Incidencias</th><th>Vehículos</th><th>Media</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="subfam-table-wrap">
-      <div class="subfam-table-title">📊 Media incidencias/vehículo — Carga Lateral</div>
-      <table class="subfam-table" id="tabla-lateral">
-        <thead><tr><th>Subfamilia</th><th>Incidencias</th><th>Vehículos</th><th>Media</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Fila 7: TOP REINCIDENTES (NUEVO) -->
-  <div class="chart-row">
-    <div class="chart-panel wide" id="panelTopReincidentes">
-      <div class="panel-header">
-        <div class="panel-title">Top Vehículos Reincidentes (≥2 averías)</div>
-      </div>
-      <canvas id="graficoTopReincidentes"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
-    </div>
-  </div>
-
-  <!-- Fila 8: Evolución -->
-  <div class="chart-row">
-    <div class="chart-panel wide" id="panelEvolucion">
-      <div class="panel-header">
-        <div class="panel-title">Evolución mensual por familia</div>
+        <span class="panel-title">Evolución mensual por familia</span>
+        <button class="btn-filtro-panel" data-campo="FAMILIA AVERIA">⊟</button>
       </div>
       <canvas id="graficoEvolucion"></canvas>
-      <div class="resize-handle"></div>
-      <div class="resize-handle-e"></div>
-      <div class="resize-handle-se"></div>
+      <div class="resize-handle" data-panel="panel-evolucion"></div>
     </div>
   </div>
 
 </div>
 
-<div id="tablaAverias_wrapper">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
-    <button id="btnColumnas">☰ Columnas visibles</button>
-    <button id="btnAleatorio">🔀 Orden aleatorio</button>
-  </div>
-  <table id="tablaAverias" class="display">
-    <thead></thead>
-    <tbody></tbody>
-  </table>
+<div style="margin-bottom:8px;">
+  <button id="btnColumnas">☰ Columnas visibles</button>
+  <button id="btnAleatorio">🔀 Orden aleatorio</button>
 </div>
+<table id="tablaAverias" class="display" width="100%"></table>
 
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/colresizable@1.7.0/colResizable.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

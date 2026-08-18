@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parque Central - Resumen Vehículos por Familia Avería</title>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="style.css">
+<style>
+/* Stats */
+.stats-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: 14px 20px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  min-width: 160px;
+}
+.stat-label {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.6em;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Tabla resumen */
+.table-container {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+#tablaResumen {
+  width: 100% !important;
+}
+#tablaResumen th {
+  white-space: nowrap;
+  font-size: 0.85em;
+}
+#tablaResumen td {
+  text-align: center;
+}
+#tablaResumen td:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+.cell-zero { color: var(--text-muted); opacity: 0.5; }
+.cell-low { color: var(--text); }
+.cell-medium { color: #ffd166; font-weight: 600; }
+.cell-high { color: #ff6b6b; font-weight: 700; }
+
+/* Link volver */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9em;
+  margin-bottom: 14px;
+  transition: opacity 0.2s;
+}
+.back-link:hover { opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">◀ Volver al Dashboard</a>
+
+<div class="header">
+  <h1>📋 Resumen Vehículos por Familia Avería</h1>
+  <button id="toggleModo">☀ Modo claro</button>
+</div>
+
+<div class="controls">
+  <label>Fecha inicio: <input type="date" id="fechaInicio"></label>
+  <label>Fecha fin: <input type="date" id="fechaFin"></label>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Total Vehículos</div>
+    <div class="stat-value" id="statVehiculos">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Averías</div>
+    <div class="stat-value" id="statAverias">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Familias Avería</div>
+    <div class="stat-value" id="statFamilias">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Días en Rango</div>
+    <div class="stat-value" id="statDias">0</div>
+  </div>
+</div>
+
+<div class="table-container">
+  <table id="tablaResumen" class="display" width="100%"></table>
+</div>
+
+<script>
+// Estado
+let modoOscuro = true;
+let allData = [];
+let familias = [];
+let tablaDT = null;
+
+// Modo claro/oscuro
+document.getElementById('toggleModo').addEventListener('click', () => {
+  modoOscuro = !modoOscuro;
+  document.body.classList.toggle('light-mode', !modoOscuro);
+  document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+  if (tablaDT) tablaDT.draw(false);
+});
+
+// Cargar datos
+fetch('resumen_full.json')
+  .then(r => r.json())
+  .then(data => {
+    // Normalizar y parsear fechas
+    data.forEach(d => {
+      if (d['FAMILIA AVERIA']) {
+        d['FAMILIA AVERIA'] = d['FAMILIA AVERIA'].toString().trim().toUpperCase();
+      }
+      if (d['VHLO']) {
+        d['VHLO'] = d['VHLO'].toString().trim();
+      }
+      try {
+        if (d['FECHA AVISO']) {
+          const parts = d['FECHA AVISO'].split('/').map(Number);
+          if (parts.length === 3) {
+            const fecha = new Date(parts[2], parts[1] - 1, parts[0]);
+            if (!isNaN(fecha)) d.fechaJS = fecha;
+          }
+        }
+      } catch (e) {}
+    });
+
+    allData = data.filter(d => d.fechaJS && d.VHLO && d['FAMILIA AVERIA']);
+
+    // Obtener familias únicas
+    familias = [...new Set(allData.map(d => d['FAMILIA AVERIA']))].filter(f => f && f !== '****').sort();
+
+    // Inicializar fechas con el rango de los datos
+    inicializarFechas();
+    initTable();
+    updateTable();
+  })
+  .catch(e => console.error('Error cargando JSON:', e));
+
+// Inicializar fechas
+function inicializarFechas() {
+  const fechas = allData.filter(d => d.fechaJS && !isNaN(d.fechaJS)).map(d => d.fechaJS);
+  if (!fechas.length) return;
+
+  const minDate = new Date(Math.min(...fechas));
+  const maxDate = new Date(Math.max(...fechas));
+
+  document.getElementById('fechaInicio').valueAsDate = minDate;
+  document.getElementById('fechaFin').valueAsDate = maxDate;
+
+  document.getElementById('fechaInicio').addEventListener('change', updateTable);
+  document.getElementById('fechaFin').addEventListener('change', updateTable);
+}
+
+// Inicializar tabla
+function initTable() {
+  const columns = [
+    { title: 'Vehículo', data: 'vehiculo' },
+    { title: 'Total', data: 'total' },
+    ...familias.map(fam => ({ title: fam, data: fam }))
+  ];
+
+  tablaDT = $('#tablaResumen').DataTable({
+    data: [],
+    columns: columns,
+    order: [[1, 'desc']],
+    pageLength: 25,
+    scrollX: true,
+    language: {
+      search: 'Buscar:',
+      lengthMenu: 'Mostrar _MENU_ registros',
+      info: 'Mostrando _START_–_END_ de _TOTAL_',
+      paginate: { previous: '‹', next: '›' }
+    },
+    columnDefs: [
+      {
+        targets: '_all',
+        createdCell: function(td, cellData, rowData, row, col) {
+          if (col > 1 && typeof cellData === 'number') {
+            if (cellData === 0) {
+              $(td).addClass('cell-zero');
+            } else if (cellData <= 3) {
+              $(td).addClass('cell-low');
+            } else if (cellData <= 10) {
+              $(td).addClass('cell-medium');
+            } else {
+              $(td).addClass('cell-high');
+            }
+          }
+        }
+      }
+    ]
+  });
+}
+
+// Comparar fechas sin hora
+function cmpFecha(a, b) {
+  return new Date(a.getFullYear(), a.getMonth(), a.getDate()) -
+         new Date(b.getFullYear(), b.getMonth(), b.getDate());
+}
+
+// Actualizar tabla con datos filtrados
+function updateTable() {
+  if (!tablaDT) return;
+
+  const fi = document.getElementById('fechaInicio').valueAsDate;
+  const ff = document.getElementById('fechaFin').valueAsDate;
+
+  // Filtrar datos por rango de fechas
+  const filtrados = allData.filter(d => {
+    if (!d.fechaJS || isNaN(d.fechaJS)) return false;
+    if (!fi || !ff) return true;
+    return cmpFecha(d.fechaJS, fi) >= 0 && cmpFecha(d.fechaJS, ff) <= 0;
+  });
+
+  // Agrupar por vehículo
+  const resumen = {};
+  filtrados.forEach(d => {
+    const vhlo = d.VHLO;
+    const fam = d['FAMILIA AVERIA'];
+
+    if (!resumen[vhlo]) {
+      resumen[vhlo] = { vehiculo: vhlo, total: 0 };
+      familias.forEach(f => resumen[vhlo][f] = 0);
+    }
+
+    resumen[vhlo][fam] = (resumen[vhlo][fam] || 0) + 1;
+    resumen[vhlo].total++;
+  });
+
+  const tableData = Object.values(resumen);
+
+  // Actualizar estadísticas
+  document.getElementById('statVehiculos').textContent = tableData.length.toLocaleString('es-ES');
+  document.getElementById('statAverias').textContent = filtrados.length.toLocaleString('es-ES');
+  document.getElementById('statFamilias').textContent = familias.length;
+
+  if (fi && ff) {
+    const dias = Math.ceil((ff - fi) / (1000 * 60 * 60 * 24)) + 1;
+    document.getElementById('statDias').textContent = dias.toLocaleString('es-ES');
+  } else {
+    document.getElementById('statDias').textContent = '0';
+  }
+
+  // Actualizar DataTable
+  tablaDT.clear();
+  tablaDT.rows.add(tableData);
+  tablaDT.draw();
+}
+</script>
+</body>
+</html>

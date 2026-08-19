@@ -5,42 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Importar Datos — Control Tráfico</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Usar el mismo style.css que index.html -->
+<link rel="stylesheet" href="style.css">
+
+<!-- Fuente monoespaciada para el log -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+
+<!-- Estilos específicos mínimos para importar.html usando las variables de style.css -->
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap');
+body{padding:0;}
 
-:root {
-  --bg:#0f0f1a; --bg2:#171728; --bg3:#1e1e35;
-  --accent:#00d4aa; --accent2:#7c6fe0; --danger:#ff5566;
-  --text:#e0e0f0; --muted:#6666aa; --border:#2a2a45;
-  --shadow:0 8px 32px rgba(0,0,0,0.5);
-}
-
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;padding:0;}
-
-/* Header */
+/* ── HEADER ── */
 .header{
   background:var(--bg2);border-bottom:1px solid var(--border);
   padding:18px 32px;display:flex;align-items:center;gap:16px;
 }
-.header-logo{font-family:'Rajdhani',sans-serif;font-size:1.4em;font-weight:700;color:var(--accent);letter-spacing:2px;}
-.header-sub{color:var(--muted);font-size:.85em;margin-left:auto;}
+.header-logo{font-family:'Inter',sans-serif;font-size:1.4em;font-weight:700;color:var(--accent);letter-spacing:1px;}
+.header-sub{color:var(--text-muted);font-size:.85em;margin-left:auto;}
 .btn-back{
-  background:transparent;border:1px solid var(--border);color:var(--muted);
+  background:var(--btn-bg);border:1px solid var(--border);color:var(--btn-text);
   padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;
   text-decoration:none;display:inline-flex;align-items:center;gap:6px;
-  transition:all .2s;
+  transition:all .2s;font-family:'Inter',sans-serif;
 }
-.btn-back:hover{border-color:var(--accent);color:var(--accent);}
+.btn-back:hover{background:var(--btn-hover);color:var(--btn-hover-text);border-color:var(--btn-hover);}
+
+/* Botón modo claro/oscuro */
+.btn-modo{
+  background:var(--btn-bg);border:1px solid var(--border);color:var(--btn-text);
+  padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;
+  transition:all .2s;font-family:'Inter',sans-serif;
+}
+.btn-modo:hover{background:var(--btn-hover);color:var(--btn-hover-text);border-color:var(--btn-hover);}
 
 .container{max-width:1100px;margin:0 auto;padding:32px;}
 
-/* Steps */
+/* ── STEPS ── */
 .steps{display:flex;gap:0;margin-bottom:40px;}
 .step{
   flex:1;padding:14px 20px;background:var(--bg2);border:1px solid var(--border);
-  position:relative;font-size:.8em;color:var(--muted);
-  transition:all .3s;
+  position:relative;font-size:.8em;color:var(--text-muted);
+  transition:all .3s;font-family:'Inter',sans-serif;
 }
 .step:first-child{border-radius:8px 0 0 8px;}
 .step:last-child{border-radius:0 8px 8px 0;}
@@ -49,8 +55,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .step-num{
   display:inline-flex;align-items:center;justify-content:center;
   width:22px;height:22px;border-radius:50%;
-  background:var(--border);color:var(--muted);
-  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1em;
+  background:var(--border);color:var(--text-muted);
+  font-family:'Inter',sans-serif;font-weight:700;font-size:1em;
   margin-right:8px;transition:all .3s;
 }
 .step.active .step-num{background:var(--accent);color:var(--bg);}
@@ -58,7 +64,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .step.done .step-num::before{content:'✓';}
 .step.done .step-num-inner{display:none;}
 
-/* Zone */
+/* ── ZONE (drop zones) ── */
 .zone{
   background:var(--bg2);border:2px dashed var(--border);border-radius:12px;
   padding:48px 32px;text-align:center;transition:all .3s;cursor:pointer;
@@ -66,10 +72,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 }
 .zone:hover,.zone.drag-over{border-color:var(--accent);background:var(--bg3);}
 .zone-icon{font-size:3em;margin-bottom:16px;display:block;}
-.zone-title{font-family:'Rajdhani',sans-serif;font-size:1.4em;font-weight:700;color:var(--text);margin-bottom:8px;}
-.zone-sub{color:var(--muted);font-size:.85em;margin-bottom:24px;}
+.zone-title{font-family:'Inter',sans-serif;font-size:1.4em;font-weight:700;color:var(--text);margin-bottom:8px;}
+.zone-sub{color:var(--text-muted);font-size:.85em;margin-bottom:24px;}
 .zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 
+/* ── BOTONES ── */
 .btn{
   display:inline-flex;align-items:center;gap:8px;
   padding:10px 24px;border-radius:8px;font-size:13px;font-weight:500;
@@ -78,95 +85,113 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .btn-primary{background:var(--accent);color:var(--bg);}
 .btn-primary:hover{opacity:.85;transform:translateY(-1px);}
 .btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;}
-.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
-.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
-.btn-danger{background:var(--danger);color:#fff;}
+.btn-secondary{background:var(--btn-bg);color:var(--btn-text);border:1px solid var(--border);}
+.btn-secondary:hover{background:var(--btn-hover);color:var(--btn-hover-text);border-color:var(--btn-hover);}
+.btn-danger{background:var(--accent4);color:#fff;}
 .btn-danger:hover{opacity:.85;}
 
-/* Info cards */
+/* ── INFO CARDS ── */
 .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0;}
 .info-card{
-  background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--accent);
-  border-radius:8px;padding:16px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;
 }
-.info-card-label{font-size:.75em;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
-.info-card-val{font-family:'Rajdhani',sans-serif;font-size:1.6em;font-weight:700;color:var(--accent);}
+.info-card:nth-child(1){border-left:3px solid var(--kpi-value-1);}
+.info-card:nth-child(1) .info-card-val{color:var(--kpi-value-1);}
+.info-card:nth-child(2){border-left:3px solid var(--kpi-value-3);}
+.info-card:nth-child(2) .info-card-val{color:var(--kpi-value-3);}
+.info-card:nth-child(3){border-left:3px solid var(--kpi-value-2);}
+.info-card:nth-child(3) .info-card-val{color:var(--kpi-value-2);}
+.info-card-label{font-size:.75em;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-family:'Inter',sans-serif;font-weight:500;}
+.info-card-val{font-family:'Inter',sans-serif;font-size:1.6em;font-weight:700;}
 
-/* Preview table */
+/* ── PREVIEW TABLE ── */
 .table-wrap{overflow:auto;border-radius:8px;border:1px solid var(--border);margin:20px 0;max-height:360px;}
 table.preview{width:100%;border-collapse:collapse;font-size:.78em;}
 table.preview th{
-  background:var(--bg3);color:var(--muted);padding:8px 12px;
-  font-family:'Rajdhani',sans-serif;font-weight:600;font-size:.95em;
+  background:var(--table-header);color:var(--text-muted);padding:8px 12px;
+  font-family:'Inter',sans-serif;font-weight:600;font-size:.95em;
   text-align:left;position:sticky;top:0;border-bottom:2px solid var(--accent);
   white-space:nowrap;
 }
 table.preview td{padding:6px 12px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;}
 table.preview tr:hover td{background:var(--bg3);}
-table.preview tr.dup td{background:rgba(255,85,102,.08);}
-table.preview tr.dup td:first-child{border-left:3px solid var(--danger);}
+table.preview tr.dup td{background:rgba(239,68,68,.08);}
+table.preview tr.dup td:first-child{border-left:3px solid var(--accent4);}
 table.preview tr.new td:first-child{border-left:3px solid var(--accent);}
 
-/* Log */
+/* ── LOG ── */
 .log{
   background:var(--bg);border:1px solid var(--border);border-radius:8px;
   padding:16px;font-family:'JetBrains Mono',monospace;font-size:.78em;
-  max-height:180px;overflow-y:auto;color:var(--muted);
+  max-height:180px;overflow-y:auto;color:var(--text-muted);
 }
 .log-line{margin-bottom:4px;}
 .log-line.ok{color:var(--accent);}
-.log-line.warn{color:#ffd166;}
-.log-line.err{color:var(--danger);}
+.log-line.warn{color:var(--accent2);}
+.log-line.err{color:var(--accent4);}
 
-/* Options */
+/* ── OPTIONS ── */
 .options{display:flex;gap:16px;margin:20px 0;flex-wrap:wrap;}
 .opt{
   flex:1;background:var(--bg3);border:2px solid var(--border);border-radius:10px;
   padding:16px;cursor:pointer;transition:all .2s;min-width:200px;
 }
-.opt:hover{border-color:var(--accent2);}
-.opt.selected{border-color:var(--accent);background:rgba(0,212,170,.07);}
-.opt-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.05em;margin-bottom:4px;}
-.opt-desc{font-size:.8em;color:var(--muted);}
+.opt:hover{border-color:var(--accent5);}
+.opt.selected{border-color:var(--accent);background:rgba(20,184,166,.1);}
+.opt-title{font-family:'Inter',sans-serif;font-weight:700;font-size:1.05em;margin-bottom:4px;color:var(--text);}
+.opt-desc{font-size:.8em;color:var(--text-muted);}
 
-/* Progress */
+/* ── PROGRESS ── */
 .progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin:12px 0;}
 .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s;}
 
 .section-title{
-  font-family:'Rajdhani',sans-serif;font-size:1.1em;font-weight:700;
-  color:var(--muted);text-transform:uppercase;letter-spacing:1px;
+  font-family:'Inter',sans-serif;font-size:1.1em;font-weight:700;
+  color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;
   margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border);
 }
 
-.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75em;font-weight:600;}
-.badge-new{background:rgba(0,212,170,.15);color:var(--accent);}
-.badge-dup{background:rgba(255,85,102,.15);color:var(--danger);}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75em;font-weight:600;font-family:'Inter',sans-serif;}
+.badge-new{background:rgba(20,184,166,.15);color:var(--accent);}
+.badge-dup{background:rgba(239,68,68,.15);color:var(--accent4);}
 
 .hidden{display:none!important;}
 
-/* Download area */
+/* ── DOWNLOAD BOX ── */
 .download-box{
-  background:linear-gradient(135deg,rgba(0,212,170,.1),rgba(124,111,224,.1));
+  background:linear-gradient(135deg,rgba(20,184,166,.1),rgba(139,92,246,.1));
   border:1px solid var(--accent);border-radius:12px;
-  padding:32px;text-align:center;margin:24px 0;
+  padding:32px;text-align:center;margin:24px 0;box-shadow:var(--shadow);
 }
-.download-box h3{font-family:'Rajdhani',sans-serif;font-size:1.4em;color:var(--accent);margin-bottom:8px;}
-.download-box p{color:var(--muted);font-size:.85em;margin-bottom:20px;}
+.download-box h3{font-family:'Inter',sans-serif;font-size:1.4em;color:var(--accent);margin-bottom:8px;}
+.download-box p{color:var(--text-muted);font-size:.85em;margin-bottom:20px;}
 
-::-webkit-scrollbar{width:6px;height:6px;}
-::-webkit-scrollbar-track{background:var(--bg);}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+/* ── WARNING ── */
+.dup-warning{
+  background:rgba(239,68,68,.1);border:1px solid var(--accent4);border-radius:8px;
+  padding:12px 16px;margin:12px 0;font-size:.85em;color:var(--accent4);
+}
+
+@media(max-width:768px){
+  .container{padding:16px;}
+  .header{padding:12px 16px;flex-wrap:wrap;}
+  .info-grid{grid-template-columns:1fr;}
+  .options{flex-direction:column;}
+  .steps{flex-direction:column;}
+  .step{border-radius:0!important;}
+  .step:first-child{border-radius:8px 8px 0 0!important;}
+  .step:last-child{border-radius:0 0 8px 8px!important;}
+}
 </style>
 </head>
 <body>
 
 <div class="header">
   <span class="header-logo">⚡ CONTROL TRÁFICO</span>
-  <span style="color:var(--muted);font-size:1.2em;">›</span>
-  <span style="font-family:'Rajdhani',sans-serif;font-weight:600;font-size:1.1em;">Importar Datos</span>
-  <a href="index.html" class="btn-back" style="margin-left:auto;">← Volver al dashboard</a>
+  <span style="color:var(--text-muted);font-size:1.2em;">›</span>
+  <span style="font-family:'Inter',sans-serif;font-weight:600;font-size:1.1em;color:var(--text);">Importar Datos</span>
+  <button class="btn-modo" id="btnModo" style="margin-left:auto;margin-right:8px;">☀ Modo claro</button>
+  <a href="index.html" class="btn-back">← Volver al dashboard</a>
 </div>
 
 <div class="container">
@@ -181,19 +206,19 @@ table.preview tr.new td:first-child{border-left:3px solid var(--accent);}
 
   <!-- PASO 1: Subir archivo -->
   <div id="panel1">
-    <p class="section-title">Paso 1 — Subir Excel o CSV</p>
+    <p class="section-title">Paso 2 — Subir Excel o CSV (PREFERIDO) //Subir antes JSON actual más abajo//</p>
     <div class="zone" id="dropZone">
       <span class="zone-icon">📂</span>
       <div class="zone-title">Arrastra tu archivo aquí</div>
-      <div class="zone-sub">O haz clic para seleccionarlo · Formatos: <strong>.xlsx · .xls · .csv</strong></div>
+      <div class="zone-sub">O haz clic para seleccionarlo · Formatos: <strong>.xlsx · .xls · .csv (PREFERIDO)</strong></div>
       <button class="btn btn-primary" style="position:relative;z-index:2;pointer-events:none;">Seleccionar archivo</button>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
     </div>
 
-    <p class="section-title" style="margin-top:32px;">También necesitas el JSON actual</p>
+    <p class="section-title" style="margin-top:32px;">Paso 1- Subir JSON actual (opcional)</p>
     <div class="zone" id="dropZoneJson" style="padding:24px 32px;">
       <span style="font-size:1.5em;display:block;margin-bottom:8px;">📄</span>
-      <div class="zone-title" style="font-size:1.1em;">resumen_full.json <span style="color:var(--muted);font-weight:400;font-size:.8em;">(opcional — para fusionar con datos existentes)</span></div>
+      <div class="zone-title" style="font-size:1.1em;">resumen_full.json <span style="color:var(--text-muted);font-weight:400;font-size:.8em;">(opcional — para fusionar con datos existentes)</span></div>
       <div class="zone-sub">Si no lo subes, el JSON descargado contendrá solo los datos nuevos</div>
       <input type="file" id="jsonInput" accept=".json">
     </div>
@@ -219,14 +244,14 @@ table.preview tr.new td:first-child{border-left:3px solid var(--accent);}
       </div>
     </div>
 
-    <div id="dupWarning" class="hidden" style="background:rgba(255,85,102,.1);border:1px solid var(--danger);border-radius:8px;padding:12px 16px;margin:12px 0;font-size:.85em;color:#ff8899;">
+    <div id="dupWarning" class="dup-warning hidden">
       ⚠️ Se detectaron <strong id="dupCount">0</strong> registros duplicados (mismo Nº Aviso). Se ignorarán automáticamente.
     </div>
 
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="font-size:.85em;color:var(--muted);">Vista previa (primeras 50 filas del archivo nuevo)</span>
+      <span style="font-size:.85em;color:var(--text-muted);">Vista previa (primeras 50 filas del archivo nuevo)</span>
       <div style="display:flex;gap:8px;">
         <span class="badge badge-new">▏ Nuevo</span>
         <span class="badge badge-dup">▏ Duplicado</span>
@@ -274,6 +299,20 @@ table.preview tr.new td:first-child{border-left:3px solid var(--accent);}
 </div>
 
 <script>
+// ── Modo claro/oscuro ──
+let modoOscuro = localStorage.getItem('importar_modo') !== 'light';
+function actualizarModo() {
+  document.body.classList.toggle('light-mode', !modoOscuro);
+  document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+  localStorage.setItem('importar_modo', modoOscuro ? 'dark' : 'light');
+}
+document.getElementById('btnModo').addEventListener('click', () => {
+  modoOscuro = !modoOscuro;
+  actualizarModo();
+});
+actualizarModo();
+
+// ── Lógica original ──
 const CAMPOS = ['FAMILIA','VHLO','CONDUCTOR','FAMILIA AVERIA','DEFICIENCIAS DETECTADAS',
   'DESCRIPCION AVERIA','FOTO','FECHA AVISO','HORA','TURNO','Nº AVISO',
   'AVISO ANTIGUO?','ORIGEN AVISO','TIPO ORDEN'];
@@ -351,17 +390,14 @@ function normalizarDatos(rows) {
   return rows.map(row => {
     const obj = {};
     CAMPOS.forEach(campo => {
-      // Buscar el campo ignorando tildes y mayúsculas
       const key = Object.keys(row).find(k =>
         k.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim() ===
         campo.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim()
       );
       let val = key ? row[key] : '';
-      // Normalizar fecha
       if (campo === 'FECHA AVISO' && val) {
         val = normalizarFecha(val);
       }
-      // Normalizar Nº AVISO como string
       if (campo === 'Nº AVISO' && val) val = val.toString().trim();
       obj[campo] = val !== undefined && val !== null ? val.toString().trim() : '';
     });
@@ -371,9 +407,7 @@ function normalizarDatos(rows) {
 
 function normalizarFecha(val) {
   if (!val) return '';
-  // Si ya es dd/mm/yyyy
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) return val;
-  // Si es yyyy-mm-dd o similar
   const d = new Date(val);
   if (!isNaN(d)) {
     const dd = String(d.getDate()).padStart(2,'0');
@@ -385,7 +419,6 @@ function normalizarFecha(val) {
 }
 
 function mostrarPrevisualizacion(filename) {
-  // Calcular duplicados por Nº AVISO
   const avisosJson = new Set(datosJson.map(r => r['Nº AVISO'] ? r['Nº AVISO'].toString().trim() : '').filter(Boolean));
   let dups = 0;
   datosExcel.forEach(r => {
@@ -403,7 +436,6 @@ function mostrarPrevisualizacion(filename) {
     document.getElementById('dupCount').textContent = dups;
   }
 
-  // Tabla preview
   const head = document.getElementById('previewHead');
   const body = document.getElementById('previewBody');
   head.innerHTML = '<tr>' + CAMPOS.map(c => `<th>${c}</th>`).join('') + '</tr>';
@@ -502,7 +534,7 @@ function reiniciar() {
   document.getElementById('progressFill').style.width='0%';
   document.getElementById('progressFill3').style.width='0%';
   dropZoneJson.style.borderColor='';
-  dropZoneJson.querySelector('.zone-title').innerHTML='📄 resumen_full.json <span style="color:var(--muted);font-weight:400;font-size:.8em;">(opcional — para fusionar con datos existentes)</span>';
+  dropZoneJson.querySelector('.zone-title').innerHTML='📄 resumen_full.json <span style="color:var(--text-muted);font-weight:400;font-size:.8em;">(opcional — para fusionar con datos existentes)</span>';
   selOpt('merge');
   goStep(1);
 }

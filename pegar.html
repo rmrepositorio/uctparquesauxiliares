@@ -4,86 +4,100 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pegar Datos — Control Tráfico</title>
+
+<!-- Usar el mismo style.css que index.html -->
+<link rel="stylesheet" href="style.css">
+
+<!-- Fuente monoespaciada para el textarea de código -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+
+<!-- Estilos específicos mínimos para pegar.html usando las variables de style.css -->
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap');
-
-:root {
-  --bg:#0f0f1a; --bg2:#171728; --bg3:#1e1e35;
-  --accent:#00d4aa; --accent2:#7c6fe0; --danger:#ff5566;
-  --text:#e0e0f0; --muted:#6666aa; --border:#2a2a45;
-  --shadow:0 8px 32px rgba(0,0,0,0.5);
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
-
-.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;gap:12px;}
-.header-logo{font-family:'Rajdhani',sans-serif;font-size:1.4em;font-weight:700;color:var(--accent);letter-spacing:2px;}
-.btn-back{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;text-decoration:none;margin-left:auto;transition:all .2s;}
-.btn-back:hover{border-color:var(--accent);color:var(--accent);}
-
 .container{max-width:1200px;margin:0 auto;padding:28px 32px;}
 
+/* ── HEADER ── */
+.header{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 32px;display:flex;align-items:center;gap:12px;margin-bottom:24px;box-shadow:var(--shadow);}
+.header-logo{font-family:'Inter',sans-serif;font-size:1.4em;font-weight:700;color:var(--accent);letter-spacing:1px;}
+.btn-back{background:var(--btn-bg);border:1px solid var(--border);color:var(--btn-text);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;text-decoration:none;margin-left:auto;transition:all .2s;font-family:'Inter',sans-serif;}
+.btn-back:hover{background:var(--btn-hover);color:var(--btn-hover-text);border-color:var(--btn-hover);}
+
+/* Botón modo claro/oscuro */
+.btn-modo{background:var(--btn-bg);border:1px solid var(--border);color:var(--btn-text);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
+.btn-modo:hover{background:var(--btn-hover);color:var(--btn-hover-text);border-color:var(--btn-hover);}
+
+/* ── STEPS ── */
 .steps{display:flex;gap:0;margin-bottom:32px;}
-.step{flex:1;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);font-size:.8em;color:var(--muted);transition:all .3s;}
+.step{flex:1;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);font-size:.8em;color:var(--text-muted);transition:all .3s;font-family:'Inter',sans-serif;}
 .step:first-child{border-radius:8px 0 0 8px;}
 .step:last-child{border-radius:0 8px 8px 0;}
 .step.active{background:var(--bg3);border-color:var(--accent);color:var(--text);}
 .step.done{border-color:var(--accent);color:var(--accent);}
-.step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--border);color:var(--muted);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.95em;margin-right:7px;transition:all .3s;}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--border);color:var(--text-muted);font-family:'Inter',sans-serif;font-weight:700;font-size:.95em;margin-right:7px;transition:all .3s;}
 .step.active .step-num{background:var(--accent);color:var(--bg);}
 .step.done .step-num{background:var(--accent);color:var(--bg);}
 
+/* ── BOTONES ── */
 .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .2s;font-family:'Inter',sans-serif;}
 .btn-primary{background:var(--accent);color:var(--bg);}
 .btn-primary:hover{opacity:.85;transform:translateY(-1px);}
 .btn-primary:disabled{opacity:.35;cursor:not-allowed;transform:none;}
-.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
-.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-secondary{background:var(--btn-bg);color:var(--btn-text);border:1px solid var(--border);}
+.btn-secondary:hover{background:var(--btn-hover);color:var(--btn-hover-text);border-color:var(--btn-hover);}
 
-/* Zona de pegado */
+/* ── ZONA DE PEGADO ── */
 .paste-zone{
   border:2px dashed var(--border);border-radius:12px;
   background:var(--bg2);padding:0;
   transition:border-color .3s;overflow:hidden;
 }
 .paste-zone.has-data{border-color:var(--accent);border-style:solid;}
-.paste-zone.focusing{border-color:var(--accent2);}
+.paste-zone.focusing{border-color:var(--accent5);}
 
-.paste-hint{
-  padding:48px 32px;text-align:center;
-}
+.paste-hint{padding:48px 32px;text-align:center;}
 .paste-hint-icon{font-size:3em;margin-bottom:12px;display:block;}
-.paste-hint h2{font-family:'Rajdhani',sans-serif;font-size:1.5em;font-weight:700;margin-bottom:8px;}
-.paste-hint p{color:var(--muted);font-size:.9em;margin-bottom:20px;}
+.paste-hint h2{font-family:'Inter',sans-serif;font-size:1.5em;font-weight:700;margin-bottom:8px;color:var(--text);}
+.paste-hint p{color:var(--text-muted);font-size:.9em;margin-bottom:20px;}
 .shortcut{display:inline-block;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:1em;color:var(--accent);letter-spacing:2px;}
 
-/* Área textarea oculta para capturar pegado */
-#pasteCapture{
-  position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;
+#pasteArea{
+  width:100%;min-height:120px;resize:vertical;
+  background:var(--bg3);color:var(--text);
+  border:none;border-top:1px solid var(--border);
+  padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:.78em;
+  outline:none;display:block;
 }
+#pasteArea:focus{box-shadow:inset 0 0 0 2px var(--accent);}
 
-/* Preview tabla */
+#pasteCapture{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;}
+
+/* ── PREVIEW TABLA ── */
 .preview-header{
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border);
 }
-.preview-title{font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--accent);font-size:1em;text-transform:uppercase;letter-spacing:.5px;}
+.preview-title{font-family:'Inter',sans-serif;font-weight:700;color:var(--accent);font-size:1em;text-transform:uppercase;letter-spacing:.5px;}
 .preview-wrap{overflow:auto;max-height:340px;}
 table.ptable{width:100%;border-collapse:collapse;font-size:.78em;}
-table.ptable th{background:var(--bg3);color:var(--muted);padding:8px 12px;font-family:'Rajdhani',sans-serif;font-weight:600;text-align:left;position:sticky;top:0;border-bottom:2px solid var(--accent);white-space:nowrap;}
+table.ptable th{background:var(--table-header);color:var(--text-muted);padding:8px 12px;font-family:'Inter',sans-serif;font-weight:600;text-align:left;position:sticky;top:0;border-bottom:2px solid var(--accent);white-space:nowrap;}
 table.ptable td{padding:6px 12px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;}
-table.ptable tr.dup td{background:rgba(255,85,102,.08);}
-table.ptable tr.dup td:first-child{border-left:3px solid var(--danger);}
+table.ptable tr.dup td{background:rgba(239,68,68,.08);}
+table.ptable tr.dup td:first-child{border-left:3px solid var(--accent4);}
 table.ptable tr.new td:first-child{border-left:3px solid var(--accent);}
 table.ptable tr:hover td{background:var(--bg3);}
 
-/* Stats */
+/* ── STATS ── */
 .stats{display:flex;gap:12px;margin:20px 0;}
 .stat{flex:1;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:14px 16px;text-align:center;}
-.stat-label{font-size:.75em;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
-.stat-val{font-family:'Rajdhani',sans-serif;font-size:1.8em;font-weight:700;color:var(--accent);}
+.stat:nth-child(2){border-left-color:var(--accent7);}
+.stat:nth-child(3){border-left-color:var(--accent3);}
+.stat:nth-child(4){border-left-color:var(--accent2);}
+.stat-label{font-size:.75em;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-family:'Inter',sans-serif;}
+.stat-val{font-family:'Inter',sans-serif;font-size:1.8em;font-weight:700;color:var(--accent);}
+.stat:nth-child(2) .stat-val{color:var(--accent7);}
+.stat:nth-child(3) .stat-val{color:var(--accent3);}
+.stat:nth-child(4) .stat-val{color:var(--accent2);}
 
-/* JSON zone */
+/* ── JSON ZONE ── */
 .json-zone{
   border:2px dashed var(--border);border-radius:10px;padding:20px 24px;
   background:var(--bg2);cursor:pointer;transition:all .2s;position:relative;text-align:center;
@@ -92,35 +106,43 @@ table.ptable tr:hover td{background:var(--bg3);}
 .json-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 .json-zone.loaded{border-color:var(--accent);border-style:solid;}
 
-/* Options */
+/* ── OPTIONS ── */
 .opt-row{display:flex;gap:12px;margin:16px 0;}
 .opt{flex:1;background:var(--bg3);border:2px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .2s;}
-.opt:hover{border-color:var(--accent2);}
-.opt.selected{border-color:var(--accent);background:rgba(0,212,170,.07);}
-.opt-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1em;margin-bottom:3px;}
-.opt-desc{font-size:.78em;color:var(--muted);}
+.opt:hover{border-color:var(--accent5);}
+.opt.selected{border-color:var(--accent);background:rgba(20,184,166,.1);}
+.opt-title{font-family:'Inter',sans-serif;font-weight:700;font-size:1em;margin-bottom:3px;color:var(--text);}
+.opt-desc{font-size:.78em;color:var(--text-muted);}
 
-.warn{background:rgba(255,85,102,.1);border:1px solid var(--danger);border-radius:8px;padding:10px 14px;font-size:.82em;color:#ff8899;margin:10px 0;}
-.section-title{font-family:'Rajdhani',sans-serif;font-size:.9em;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.warn{background:rgba(239,68,68,.1);border:1px solid var(--accent4);border-radius:8px;padding:10px 14px;font-size:.82em;color:var(--accent4);margin:10px 0;}
+.section-title{font-family:'Inter',sans-serif;font-size:.9em;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
 
-.download-box{background:linear-gradient(135deg,rgba(0,212,170,.1),rgba(124,111,224,.1));border:1px solid var(--accent);border-radius:12px;padding:32px;text-align:center;margin:20px 0;}
-.download-box h3{font-family:'Rajdhani',sans-serif;font-size:1.4em;color:var(--accent);margin-bottom:8px;}
-.download-box p{color:var(--muted);font-size:.85em;margin-bottom:20px;}
+.download-box{background:linear-gradient(135deg,rgba(20,184,166,.1),rgba(139,92,246,.1));border:1px solid var(--accent);border-radius:12px;padding:32px;text-align:center;margin:20px 0;box-shadow:var(--shadow);}
+.download-box h3{font-family:'Inter',sans-serif;font-size:1.4em;color:var(--accent);margin-bottom:8px;}
+.download-box p{color:var(--text-muted);font-size:.85em;margin-bottom:20px;}
 
 .hidden{display:none!important;}
-::-webkit-scrollbar{width:6px;height:6px;}
-::-webkit-scrollbar-track{background:var(--bg);}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+@media(max-width:768px){
+  .container{padding:16px;}
+  .header{padding:12px 16px;flex-wrap:wrap;}
+  .stats{flex-direction:column;}
+  .opt-row{flex-direction:column;}
+  .steps{flex-direction:column;}
+  .step{border-radius:0!important;}
+  .step:first-child{border-radius:8px 8px 0 0!important;}
+  .step:last-child{border-radius:0 0 8px 8px!important;}
+}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <span class="header-logo">⚡ CONTROL TRÁFICO</span>
-  <span style="color:var(--muted);font-size:1.2em;">›</span>
-  <span style="font-family:'Rajdhani',sans-serif;font-weight:600;font-size:1.1em;">Pegar desde Excel</span>
+  <span class="header-logo">⚡U.C.T. - PARQUES AUXILIARES</span>
+  <span style="color:var(--text-muted);font-size:1.2em;">›</span>
+  <span style="font-family:'Inter',sans-serif;font-weight:600;font-size:1.1em;color:var(--text);">Pegar desde Excel</span>
   <a href="importar.html" class="btn-back" style="margin-right:8px;">📂 Importar archivo</a>
+  <button class="btn-modo" id="btnModo">☀ Modo claro</button>
   <a href="index.html" class="btn-back">← Dashboard</a>
 </div>
 
@@ -144,13 +166,6 @@ table.ptable tr:hover td{background:var(--bg3);}
       <textarea
         id="pasteArea"
         placeholder="Haz clic aquí y luego Ctrl+V..."
-        style="
-          width:100%;min-height:120px;resize:vertical;
-          background:var(--bg3);color:var(--text);
-          border:none;border-top:1px solid var(--border);
-          padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:.78em;
-          outline:none;display:block;
-        "
       ></textarea>
       <div style="padding:10px 16px;display:flex;justify-content:flex-end;">
         <button class="btn btn-primary" onclick="procesarDesdeTextarea()">Procesar datos →</button>
@@ -185,8 +200,8 @@ table.ptable tr:hover td{background:var(--bg3);}
     <p class="section-title">JSON actual (opcional)</p>
     <div class="json-zone" id="jsonZone">
       <div style="font-size:1.5em;margin-bottom:6px;">📄</div>
-      <div style="font-family:'Rajdhani',sans-serif;font-weight:600;">resumen_full.json</div>
-      <div style="font-size:.8em;color:var(--muted);margin-top:4px;">Arrastra o haz clic para cargar — necesario para fusionar con datos existentes</div>
+      <div style="font-family:'Inter',sans-serif;font-weight:600;color:var(--text);">resumen_full.json</div>
+      <div style="font-size:.8em;color:var(--text-muted);margin-top:4px;">Arrastra o haz clic para cargar — necesario para fusionar con datos existentes</div>
       <input type="file" id="jsonInput" accept=".json">
     </div>
 
@@ -223,6 +238,20 @@ table.ptable tr:hover td{background:var(--bg3);}
 </div>
 
 <script>
+// ── Modo claro/oscuro ──
+let modoOscuro = localStorage.getItem('pegar_modo') !== 'light';
+function actualizarModo() {
+  document.body.classList.toggle('light-mode', !modoOscuro);
+  document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+  localStorage.setItem('pegar_modo', modoOscuro ? 'dark' : 'light');
+}
+document.getElementById('btnModo').addEventListener('click', () => {
+  modoOscuro = !modoOscuro;
+  actualizarModo();
+});
+actualizarModo();
+
+// ── Lógica original ──
 const CAMPOS = ['FAMILIA','VHLO','CONDUCTOR','FAMILIA AVERIA','DEFICIENCIAS DETECTADAS',
   'DESCRIPCION AVERIA','FOTO','FECHA AVISO','HORA','TURNO','Nº AVISO',
   'AVISO ANTIGUO?','ORIGEN AVISO','TIPO ORDEN'];
@@ -231,7 +260,6 @@ let datosPegados = [], datosJson = [], datosFinal = [], modo = 'merge';
 
 // ── Auto-procesar al pegar en el textarea ──
 document.getElementById('pasteArea').addEventListener('paste', e => {
-  // Pequeño delay para que el textarea tenga el contenido
   setTimeout(() => {
     const txt = document.getElementById('pasteArea').value;
     if (txt.trim()) procesarTexto(txt);
@@ -248,7 +276,6 @@ function procesarTexto(txt) {
   const lineas = txt.split('\n').map(l => l.trimEnd()).filter(l => l.trim());
   if (lineas.length < 2) { alert('No se detectaron suficientes filas. Asegúrate de copiar también la cabecera.'); return; }
 
-  // Detectar separador (tab o punto y coma)
   const sep = lineas[0].includes('\t') ? '\t' : ';';
   const headers = lineas[0].split(sep).map(h => h.trim().replace(/"/g,''));
   const rows = lineas.slice(1).map(l => {
@@ -267,9 +294,7 @@ function normalizarDatos(rows) {
   return rows.map(row => {
     const obj = {};
     CAMPOS.forEach(campo => {
-      const key = Object.keys(row).find(k =>
-        norm(k) === norm(campo)
-      );
+      const key = Object.keys(row).find(k => norm(k) === norm(campo));
       let val = key !== undefined ? (row[key] || '') : '';
       if (campo === 'FECHA AVISO' && val) val = normFecha(val);
       if (campo === 'Nº AVISO' && val) val = val.toString().trim();
@@ -333,7 +358,7 @@ function cargarJson(file) {
       jz.classList.add('loaded');
       jz.querySelector('div:nth-child(2)').textContent = `✓ ${file.name}`;
       jz.querySelector('div:nth-child(3)').textContent = `${datosJson.length.toLocaleString()} registros cargados`;
-      mostrarPreview(); // recalcular stats y duplicados
+      mostrarPreview();
     } catch(e) { alert('Error al leer JSON: ' + e.message); }
   };
   r.readAsText(file);

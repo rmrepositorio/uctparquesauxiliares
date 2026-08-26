@@ -1,0 +1,10 @@
+REPOSITORIOS
+
+rmrepositorio/uctparquecentral
+
+rmrepositorio/uctparqueasuxiliares
+
+
+TOKEN
+
+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

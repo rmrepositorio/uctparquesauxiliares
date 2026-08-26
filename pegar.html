@@ -138,7 +138,7 @@ table.ptable tr:hover td{background:var(--bg3);}
 <body>
 
 <div class="header">
-  <span class="header-logo">⚡U.C.T. - PARQUES AUXILIARES</span>
+  <span class="header-logo">⚡ CONTROL TRÁFICO</span>
   <span style="color:var(--text-muted);font-size:1.2em;">›</span>
   <span style="font-family:'Inter',sans-serif;font-weight:600;font-size:1.1em;color:var(--text);">Pegar desde Excel</span>
   <a href="importar.html" class="btn-back" style="margin-right:8px;">📂 Importar archivo</a>
@@ -221,6 +221,58 @@ table.ptable tr:hover td{background:var(--bg3);}
       <button class="btn btn-primary" onclick="generar()">Generar JSON →</button>
     </div>
   </div>
+
+<!-- ═══════ PANEL SUBIDA A GITHUB ═══════ -->
+<div id="panelGitHub" style="background: var(--chart-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin: 20px 0; display: none;">
+  <h3 style="margin: 0 0 16px 0; color: var(--text); font-size: 1.1em;">📤 Subir a GitHub</h3>
+  
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+    <div>
+      <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 4px;">Repositorio (usuario/repo)</label>
+      <input type="text" id="ghRepo" placeholder="ej: miusuario/mi-repo" 
+             style="width: 100%; padding: 8px 12px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); border-radius: 6px; font-size: 12px;">
+    </div>
+    <div>
+      <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 4px;">Ruta del archivo</label>
+      <input type="text" id="ghRuta" value="resumen_full.json" 
+             style="width: 100%; padding: 8px 12px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); border-radius: 6px; font-size: 12px;">
+    </div>
+  </div>
+  
+  <div style="margin-bottom: 12px;">
+    <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 4px;">
+      🔐 Token de GitHub 
+      <span style="opacity: 0.6;">(se guarda solo en tu navegador)</span>
+    </label>
+    <div style="display: flex; gap: 8px;">
+      <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx o github_pat_xxxxxxxxxxxx" 
+             style="flex: 1; padding: 8px 12px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); border-radius: 6px; font-size: 12px; font-family: monospace;">
+      <button onclick="document.getElementById('ghToken').type = document.getElementById('ghToken').type === 'password' ? 'text' : 'password'" 
+              style="padding: 8px 12px; background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">👁</button>
+    </div>
+  </div>
+  
+  <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+    <button id="btnSubirGitHub" onclick="subirAGitHub()" 
+            style="padding: 10px 20px; background: #238636; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+      📤 Subir JSON a GitHub
+    </button>
+    <button onclick="probarConexion()" 
+            style="padding: 10px 16px; background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+      🔌 Probar conexión
+    </button>
+    <label style="color: var(--text-muted); font-size: 12px; display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="ghRecordar" checked> Recordar token en este navegador
+    </label>
+  </div>
+  
+  <div id="ghEstado" style="margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 12px; display: none;"></div>
+</div>
+
+<button onclick="document.getElementById('panelGitHub').style.display = document.getElementById('panelGitHub').style.display === 'none' ? 'block' : 'none'" 
+        class="btn-nav" style="background: #238636; color: white; border: none;">
+  📤 Subir a GitHub
+</button>
 
   <!-- PASO 3 -->
   <div id="panel3" class="hidden">
@@ -378,6 +430,10 @@ function generar() {
     const nuevos = datosPegados.filter(r => !r['Nº AVISO'] || !avisosJson.has(r['Nº AVISO']));
     datosFinal = [...datosJson, ...nuevos];
   }
+  
+  // ✅ ESTA ES LA LÍNEA QUE FALTABA:
+  window.jsonGenerado = datosFinal; 
+  
   document.getElementById('dlSummary').textContent =
     `${datosFinal.length.toLocaleString()} registros totales · ${modo === 'merge' ? 'Fusionado' : 'Reemplazado'}`;
   goStep(3);
@@ -407,5 +463,170 @@ function reiniciar() {
   goStep(1);
 }
 </script>
+<script>
+// ═══════ CONFIGURACIÓN GITHUB ═══════
+const GH_STORAGE_KEY = 'ct_github_config';
+
+// Cargar configuración guardada al abrir la página
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const guardado = localStorage.getItem(GH_STORAGE_KEY);
+    if (guardado) {
+      const cfg = JSON.parse(guardado);
+      if (cfg.repo) document.getElementById('ghRepo').value = cfg.repo;
+      if (cfg.ruta) document.getElementById('ghRuta').value = cfg.ruta;
+      if (cfg.token) document.getElementById('ghToken').value = cfg.token;
+    }
+  } catch (e) { console.warn('No se pudo cargar config GitHub', e); }
+});
+
+function guardarConfig() {
+  if (!document.getElementById('ghRecordar').checked) return;
+  const cfg = {
+    repo: document.getElementById('ghRepo').value.trim(),
+    ruta: document.getElementById('ghRuta').value.trim(),
+    token: document.getElementById('ghToken').value.trim()
+  };
+  localStorage.setItem(GH_STORAGE_KEY, JSON.stringify(cfg));
+}
+
+function mostrarEstado(msg, tipo = 'info') {
+  const el = document.getElementById('ghEstado');
+  const colores = {
+    info:    { bg: 'rgba(59,130,246,0.15)', border: '#3b82f6', color: '#93c5fd' },
+    ok:      { bg: 'rgba(34,197,94,0.15)',  border: '#22c55e', color: '#86efac' },
+    error:   { bg: 'rgba(239,68,68,0.15)',  border: '#ef4444', color: '#fca5a5' },
+    warning: { bg: 'rgba(245,158,11,0.15)', border: '#f59e0b', color: '#fcd34d' }
+  };
+  const c = colores[tipo] || colores.info;
+  el.style.display = 'block';
+  el.style.background = c.bg;
+  el.style.border = `1px solid ${c.border}`;
+  el.style.color = c.color;
+  el.innerHTML = msg;
+}
+
+async function probarConexion() {
+  const repo = document.getElementById('ghRepo').value.trim();
+  const token = document.getElementById('ghToken').value.trim();
+  if (!repo || !token) {
+    mostrarEstado('⚠️ Rellena el repositorio y el token', 'warning');
+    return;
+  }
+  mostrarEstado('🔄 Probando conexión...', 'info');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      mostrarEstado(`✅ Conectado con <b>${data.full_name}</b><br>⭐ ${data.stargazers_count} stars · ${data.private ? 'Privado' : 'Público'}`, 'ok');
+      guardarConfig();
+    } else if (res.status === 401) {
+      mostrarEstado('❌ Token inválido o expirado', 'error');
+    } else if (res.status === 404) {
+      mostrarEstado('❌ Repositorio no encontrado o sin permisos', 'error');
+    } else {
+      mostrarEstado(`❌ Error ${res.status}: ${res.statusText}`, 'error');
+    }
+  } catch (e) {
+    mostrarEstado('❌ Error de red: ' + e.message, 'error');
+  }
+}
+
+async function subirAGitHub() {
+  // 1. Validar que hay JSON generado
+  if (!window.jsonGenerado || !window.jsonGenerado.length) {
+    mostrarEstado('⚠️ Primero genera el JSON (paso 3)', 'warning');
+    return;
+  }
+  
+  const repo = document.getElementById('ghRepo').value.trim();
+  const ruta = document.getElementById('ghRuta').value.trim() || 'resumen_full.json';
+  const token = document.getElementById('ghToken').value.trim();
+  
+  if (!repo || !token) {
+    mostrarEstado('⚠️ Rellena el repositorio y el token', 'warning');
+    return;
+  }
+  
+  const btn = document.getElementById('btnSubirGitHub');
+  const textoOriginal = btn.innerHTML;
+  btn.innerHTML = '⏳ Subiendo...';
+  btn.disabled = true;
+  mostrarEstado('🔄 Obteniendo información del archivo...', 'info');
+  
+  try {
+    const url = `https://api.github.com/repos/${repo}/contents/${ruta}`;
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json'
+    };
+    
+    // 2. Comprobar si el archivo ya existe (para obtener el SHA)
+    let sha = null;
+    try {
+      const resGet = await fetch(url, { headers });
+      if (resGet.ok) {
+        const data = await resGet.json();
+        sha = data.sha;
+      } else if (resGet.status !== 404) {
+        throw new Error(`Error al consultar archivo: ${resGet.status}`);
+      }
+    } catch (e) {
+      if (!e.message.includes('404')) console.warn('Archivo no existe aún, se creará nuevo');
+    }
+    
+    // 3. Codificar JSON a base64
+    const jsonStr = JSON.stringify(window.jsonGenerado, null, 2);
+    const contenido = btoa(unescape(encodeURIComponent(jsonStr)));
+    
+    // 4. Preparar commit
+    const mensaje = `📊 Actualización automática — ${window.jsonGenerado.length} registros — ${new Date().toLocaleString('es-ES')}`;
+    const body = {
+      message: mensaje,
+      content: contenido
+    };
+    if (sha) body.sha = sha; // Obligatorio para actualizar
+    
+    mostrarEstado('📤 Enviando datos a GitHub...', 'info');
+    
+    // 5. Subir/actualizar archivo
+    const resPut = await fetch(url, {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    
+    if (!resPut.ok) {
+      const err = await resPut.json().catch(() => ({}));
+      throw new Error(err.message || `HTTP ${resPut.status}`);
+    }
+    
+    const resultado = await resPut.json();
+    guardarConfig();
+    
+    const commitCorto = resultado.commit.sha.substring(0, 7);
+    const accion = sha ? 'actualizado' : 'creado';
+    
+    mostrarEstado(
+      `✅ <b>¡JSON ${accion} correctamente!</b><br>` +
+      `📦 ${window.jsonGenerado.length} registros<br>` +
+      `🔖 Commit: <code>${commitCorto}</code><br>` +
+      `🔗 <a href="${resultado.content.html_url}" target="_blank" style="color: inherit; text-decoration: underline;">Ver en GitHub</a><br>` +
+      `<small style="opacity: 0.7;">⏱ GitHub tarda ~1 min en propagar los cambios al dashboard</small>`,
+      'ok'
+    );
+    
+  } catch (e) {
+    console.error('Error subiendo a GitHub:', e);
+    mostrarEstado(`❌ <b>Error:</b> ${e.message}`, 'error');
+  } finally {
+    btn.innerHTML = textoOriginal;
+    btn.disabled = false;
+  }
+}
+</script>
+
 </body>
 </html>

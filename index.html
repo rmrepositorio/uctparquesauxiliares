@@ -6,15 +6,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
 <body>
 
 <div class="header">
   <h1>🚗⚡PARQUES AUXILIARES - Unidad Control Tráfico</h1>
-<a href="http://uctlipasam.vercel.app" class="btn-nav">💒 SELECCIONAR DASHBOARD</a>
   <a href="incidencias.html" class="btn-nav">📄 Listado Averias</a>
+  <a href="pegar.html" class="btn-nav">📥 Pegar Datos</a>
   <a href="resumen_vehiculos.html" class="btn-nav">📊 Tabla Resumen</a>
-   <a href="pegar.html" class="btn-nav">📥 Pegar Nuevos Datos</a>
 </div>
 
 <div class="controls">
@@ -24,6 +24,9 @@
   <button id="toggleModo">☀ Modo claro</button>
   <label>Fecha inicio: <input type="date" id="fechaInicio"></label>
   <label>Fecha fin: <input type="date" id="fechaFin"></label>
+<input type="file" id="inputCSV" accept=".csv" style="display:none;">
+<button onclick="document.getElementById('inputCSV').click()" class="btn-nav">📂 Cargar CSV Local</button>
+<span id="nombreArchivo" style="color: var(--text-muted); font-size: 12px; margin-left: 8px;"></span>
   <div class="filtros-activos" id="filtrosActivos"></div>
 </div>
 
@@ -129,7 +132,7 @@
     </div>
   </div>
 
- <!-- Fila 5: Carga Trasera + Carga Lateral -->
+  <!-- Fila 5: Carga Trasera + Carga Lateral -->
   <div class="chart-row">
     <div class="chart-panel" id="panelCargaTrasera">
       <div class="panel-header">
@@ -168,7 +171,6 @@
       </table>
     </div>
   </div>
-  
 
   <!-- Fila 7: TOP REINCIDENTES (NUEVO) -->
   <div class="chart-row">

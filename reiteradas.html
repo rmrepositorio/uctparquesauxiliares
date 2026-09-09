@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Averías Reiterativas — Control Tráfico - Parque Central</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<style>
+  .badge-reit {
+    display:inline-block;
+    background: var(--accent4);
+    color:#fff;
+    font-weight:700;
+    font-size:11px;
+    padding:3px 9px;
+    border-radius:10px;
+    min-width:26px;
+    text-align:center;
+  }
+  .badge-reit.alto { background:#dc2626; box-shadow:0 0 8px rgba(220,38,38,.4); }
+  .badge-reit.medio { background: var(--accent2); color:#0f172a; }
+  .badge-reit.bajo { background: var(--accent7); }
+  .detalle-row { background: var(--bg3) !important; }
+  .detalle-row td { padding: 0 !important; border-bottom: 2px solid var(--accent); }
+  .detalle-box {
+    padding: 16px 20px;
+    background: var(--bg2);
+    border-left: 3px solid var(--accent);
+    margin: 8px 0;
+    border-radius: 6px;
+  }
+  .detalle-box h4 {
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .detalle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+  }
+  .detalle-item {
+    background: var(--bg3);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    border-left: 2px solid var(--accent3);
+  }
+  .detalle-item .fecha {
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .detalle-item .desc {
+    color: var(--text);
+    margin-top: 4px;
+    word-break: break-word;
+  }
+  .detalle-item .meta {
+    color: var(--text-muted);
+    font-size: 10px;
+    margin-top: 3px;
+  }
+  .btn-expand {
+    background: var(--accent3);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-expand:hover { opacity: 0.85; }
+  .kpi-reit { border-top-color: var(--accent4) !important; }
+  .kpi-reit span { color: var(--accent4) !important; }
+  .aviso-info {
+    background: var(--bg2);
+    border-left: 3px solid var(--accent2);
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .aviso-info strong { color: var(--accent2); }
+
+  /* ── Menú columnas ── */
+  #menuColumnas {
+    position: fixed;
+    z-index: 9999;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    width: 260px;
+    padding: 16px;
+    font-size: 12px;
+  }
+  .col-menu-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .col-menu-barra {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .col-menu-barra button {
+    flex: 1;
+    font-size: 11px;
+    padding: 6px 0;
+  }
+  .col-menu-lista {
+    max-height: 280px;
+    overflow-y: auto;
+    margin-bottom: 0;
+  }
+  .col-menu-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    cursor: pointer;
+    border-radius: 6px;
+    color: var(--text);
+    transition: background 0.2s;
+  }
+  .col-menu-row:hover { background: var(--bg3); }
+  .col-menu-row input[type=checkbox] {
+    accent-color: var(--accent);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+  .btn-columnas {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-columnas.activo {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* ── Fila de filtros por columna ── */
+  #tablaReiterativas thead tr.fila-filtros th {
+    padding: 6px 8px !important;
+    background: var(--bg3) !important;
+    border-bottom: 2px solid var(--accent) !important;
+    border-top: none !important;
+  }
+  .col-filter-input {
+    width: 100%;
+    font-size: 11px;
+    padding: 5px 8px;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .col-filter-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.15);
+  }
+  .col-filter-input::placeholder {
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+  .col-filter-input.active {
+    border-color: var(--accent);
+    background: rgba(20, 184, 166, 0.08);
+  }
+  .btn-limpiar-filtros {
+    background: var(--accent4);
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-limpiar-filtros:hover { opacity: 0.85; }
+
+  /* ── Botón desplegable de categorías ── */
+  .btn-col-filter {
+    background: var(--btn-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    margin-left: 4px;
+    transition: all 0.2s;
+  }
+  .btn-col-filter:hover {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+  .btn-col-filter.activo {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* ── Menú desplegable de categorías ── */
+  .menu-categorias {
+    position: fixed;
+    z-index: 9999;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg);
+    width: 280px;
+    padding: 12px;
+    font-size: 12px;
+  }
+  .menu-categorias-titulo {
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .menu-categorias-barra {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .menu-categorias-barra button {
+    flex: 1;
+    font-size: 10px;
+    padding: 5px 0;
+  }
+  .menu-categorias-lista {
+    max-height: 240px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+  .menu-categorias-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    color: var(--text);
+    transition: background 0.2s;
+  }
+  .menu-categorias-row:hover { background: var(--bg3); }
+  .menu-categorias-row input[type=checkbox] {
+    accent-color: var(--accent);
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+  }
+  .menu-categorias-aplicar {
+    width: 100%;
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+    border: none;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+  }
+  .menu-categorias-aplicar:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚠️ Averías Reiteradas - Parques Auxiliares - UCT</h1>
+  <a href="index.html" class="btn-nav">← Dashboard</a>
+  <a href="incidencias.html" class="btn-nav">📋 Incidencias</a>
+  <button id="toggleModo">☀ Modo claro</button>
+</div>
+
+<div class="aviso-info">
+  <strong>Criterio de reiteración:</strong> se consideran <strong>averías reiterativas</strong> aquellas combinaciones de
+  <strong>Vehículo (VHLO) + Deficiencia Detectada</strong> que aparecen <strong>3 o más veces</strong>
+  dentro del periodo seleccionado.
+</div>
+
+<div class="controls">
+  <label>📅 Desde: <input type="date" id="fechaInicio"></label>
+  <label>📅 Hasta: <input type="date" id="fechaFin"></label>
+  <button id="btnLimpiar">✕ Limpiar fechas</button>
+  <button id="btnLimpiarFiltros" class="btn-limpiar-filtros" style="display:none;">🧹 Limpiar filtros</button>
+  <button id="btnColumnas" class="btn-columnas">👁 Columnas</button>
+  <button id="btnExportar" style="margin-left:auto;">📥 Exportar CSV</button>
+</div>
+
+<div class="kpi-container">
+  <div class="kpi kpi-reit">
+    Combinaciones reiterativas
+    <span id="kpiCombinaciones">0</span>
+  </div>
+  <div class="kpi">
+    Total de avisos reiterativos
+    <span id="kpiTotalAvisos">0</span>
+  </div>
+  <div class="kpi">
+    Vehículo más problemático
+    <span id="kpiVehiculoTop">-</span>
+  </div>
+  <div class="kpi">
+    Deficiencia más frecuente
+    <span id="kpiDeficienciaTop">-</span>
+  </div>
+</div>
+
+<div id="tablaWrap" style="background:var(--table-bg);border-radius:12px;padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);">
+  <table id="tablaReiterativas" class="display" style="width:100%">
+    <thead>
+      <tr>
+        <th></th>
+        <th>VHLO</th>
+        <th>Deficiencia Detectada</th>
+        <th>Veces</th>
+        <th>Familia Veh.</th>
+        <th>Familia Avería</th>
+        <th>Primera vez</th>
+        <th>Última vez</th>
+        <th>Días entre avisos</th>
+        <th>Ver detalle</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// AVERÍAS REITERATIVAS
+// ═══════════════════════════════════════════════════════════════
+const UMBRAL_REITERACION = 3;
+
+let modoOscuro = localStorage.getItem('ct_modo') !== 'light';
+if (!modoOscuro) document.body.classList.add('light-mode');
+document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+
+document.getElementById('toggleModo').addEventListener('click', () => {
+  modoOscuro = !modoOscuro;
+  document.body.classList.toggle('light-mode', !modoOscuro);
+  document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+  localStorage.setItem('ct_modo', modoOscuro ? 'dark' : 'light');
+  if (window.tablaDT) window.tablaDT.draw(false);
+});
+
+// Normaliza cadenas (quita acentos, mayúsculas)
+const norm = s => (s || '').toString().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+// Agrupa los datos por (VHLO, DEFICIENCIA) y calcula estadísticas
+function calcularReiterativas(datos) {
+  const grupos = {};
+  datos.forEach(d => {
+    const vhlo = (d.VHLO || '').toString().trim();
+    const def = norm(d['DEFICIENCIAS DETECTADAS']);
+    if (!vhlo || vhlo === '****' || !def) return;
+    const key = vhlo + '||' + def;
+    if (!grupos[key]) {
+      grupos[key] = {
+        vhlo,
+        deficiencia: def,
+        deficienciaOriginal: (d['DEFICIENCIAS DETECTADAS'] || '').toString().trim(),
+        familia: (d.FAMILIA || '').toString().trim(),
+        familiaAveria: (d['FAMILIA AVERIA'] || '').toString().trim(),
+        avisos: [],
+        fechas: []
+      };
+    }
+    grupos[key].avisos.push(d);
+    if (d.fechaJS && !isNaN(d.fechaJS)) {
+      grupos[key].fechas.push(d.fechaJS);
+    }
+  });
+
+  return Object.values(grupos)
+    .filter(g => g.avisos.length >= UMBRAL_REITERACION)
+    .map(g => {
+      g.fechas.sort((a, b) => a - b);
+      const primera = g.fechas[0];
+      const ultima = g.fechas[g.fechas.length - 1];
+      const diasEntre = primera && ultima
+        ? Math.round((ultima - primera) / (1000 * 60 * 60 * 24))
+        : 0;
+      return {
+        ...g,
+        count: g.avisos.length,
+        primera,
+        ultima,
+        diasEntre
+      };
+    })
+    .sort((a, b) => b.count - a.count || a.vhlo.localeCompare(b.vhlo));
+}
+
+function formatearFecha(f) {
+  if (!f) return '-';
+  const d = new Date(f);
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function badgeCount(n) {
+  let cls = 'bajo';
+  if (n >= 6) cls = 'alto';
+  else if (n >= 4) cls = 'medio';
+  return `<span class="badge-reit ${cls}">${n}</span>`;
+}
+
+function renderDetalle(grupo) {
+  const avisos = [...grupo.avisos].sort((a, b) => (b.fechaJS || 0) - (a.fechaJS || 0));
+  const items = avisos.map(a => {
+    const desc = (a['DESCRIPCION AVERIA'] || '').toString().trim() || '-';
+    const turno = (a.TURNO || '').toString().trim() || '-';
+    const origen = (a['ORIGEN AVISO'] || '').toString().trim() || '-';
+    const nAviso = (() => {
+      for (const k of Object.keys(a)) {
+        if (k.replace(/[^A-Z ]/g, '').trim() === 'N AVISO') return a[k] || '-';
+      }
+      return '-';
+    })();
+    return `
+      <div class="detalle-item">
+        <div class="fecha">📅 ${formatearFecha(a.fechaJS)} · Turno ${turno}</div>
+        <div class="desc">${desc}</div>
+        <div class="meta">Origen: ${origen} · Nº Aviso: ${nAviso}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="detalle-box">
+      <h4>🔎 Historial de avisos — VHLO ${grupo.vhlo} · ${grupo.deficienciaOriginal}</h4>
+      <div class="detalle-grid">${items}</div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MENÚ DE COLUMNAS VISIBLES
+// ═══════════════════════════════════════════════════════════════
+function cerrarMenuColumnas() {
+  const m = document.getElementById('menuColumnas');
+  if (m) m.remove();
+  document.getElementById('btnColumnas').classList.remove('activo');
+  document.removeEventListener('click', cerrarMenuColumnasFuera);
+}
+
+function cerrarMenuColumnasFuera(e) {
+  const menu = document.getElementById('menuColumnas');
+  const btn = document.getElementById('btnColumnas');
+  if (menu && !menu.contains(e.target) && e.target !== btn) {
+    cerrarMenuColumnas();
+  }
+}
+
+function abrirMenuColumnas() {
+  const existente = document.getElementById('menuColumnas');
+  if (existente) {
+    cerrarMenuColumnas();
+    return;
+  }
+
+  const menu = document.createElement('div');
+  menu.id = 'menuColumnas';
+
+  const titulo = document.createElement('div');
+  titulo.className = 'col-menu-title';
+  titulo.textContent = 'Columnas visibles';
+  menu.appendChild(titulo);
+
+  const barra = document.createElement('div');
+  barra.className = 'col-menu-barra';
+  const btnTodas = document.createElement('button');
+  btnTodas.textContent = '✓ Todas';
+  btnTodas.onclick = () => {
+    menu.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = true;
+      window.tablaDT.column(parseInt(cb.dataset.col)).visible(true);
+    });
+  };
+  const btnNinguna = document.createElement('button');
+  btnNinguna.textContent = '✗ Ninguna';
+  btnNinguna.onclick = () => {
+    menu.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = false;
+      window.tablaDT.column(parseInt(cb.dataset.col)).visible(false);
+    });
+  };
+  barra.appendChild(btnTodas);
+  barra.appendChild(btnNinguna);
+  menu.appendChild(barra);
+
+  const lista = document.createElement('div');
+  lista.className = 'col-menu-lista';
+
+  window.tablaDT.columns().every(function (i) {
+    const header = $(this.header()).text().trim();
+    if (!header) return;
+
+    const fila = document.createElement('label');
+    fila.className = 'col-menu-row';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.col = i;
+    cb.checked = this.visible();
+    cb.addEventListener('change', () => {
+      window.tablaDT.column(i).visible(cb.checked);
+    });
+
+    const span = document.createElement('span');
+    span.textContent = header;
+
+    fila.appendChild(cb);
+    fila.appendChild(span);
+    lista.appendChild(fila);
+  });
+
+  menu.appendChild(lista);
+  document.body.appendChild(menu);
+  document.getElementById('btnColumnas').classList.add('activo');
+
+  const btn = document.getElementById('btnColumnas');
+  const rect = btn.getBoundingClientRect();
+  requestAnimationFrame(() => {
+    const mW = menu.offsetWidth;
+    const mH = menu.offsetHeight;
+    const top = (rect.bottom + 4 + mH > window.innerHeight)
+      ? Math.max(4, rect.top - mH - 4)
+      : rect.bottom + 4;
+    const left = (rect.left + mW > window.innerWidth)
+      ? Math.max(4, window.innerWidth - mW - 8)
+      : rect.left;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+  });
+
+  setTimeout(() => document.addEventListener('click', cerrarMenuColumnasFuera), 10);
+}
+
+document.getElementById('btnColumnas').addEventListener('click', (e) => {
+  e.stopPropagation();
+  abrirMenuColumnas();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Carga de datos
+// ═══════════════════════════════════════════════════════════════
+fetch('resumen_full.json')
+  .then(r => r.json())
+  .then(data => {
+    data.forEach(d => {
+      try {
+        if (!d['FECHA AVISO']) return;
+        const parts = d['FECHA AVISO'].toString().split('/').map(Number);
+        if (parts.length !== 3 || parts.some(isNaN)) return;
+        const fecha = new Date(parts[2], parts[1] - 1, parts[0]);
+        if (!isNaN(fecha)) d.fechaJS = fecha;
+      } catch (e) {}
+    });
+
+    window.dataTabla = data;
+    inicializarFechas();
+    inicializarTabla();
+    actualizar();
+  })
+  .catch(e => console.error('Error cargando JSON:', e));
+
+function inicializarFechas() {
+  const fechas = window.dataTabla.filter(d => d.fechaJS && !isNaN(d.fechaJS)).map(d => d.fechaJS);
+  if (!fechas.length) return;
+  const min = new Date(Math.min(...fechas));
+  const max = new Date(Math.max(...fechas));
+  document.getElementById('fechaInicio').valueAsDate = min;
+  document.getElementById('fechaFin').valueAsDate = max;
+  document.getElementById('fechaInicio').addEventListener('change', actualizar);
+  document.getElementById('fechaFin').addEventListener('change', actualizar);
+}
+
+function datosEnRango() {
+  const fi = document.getElementById('fechaInicio').valueAsDate;
+  const ff = document.getElementById('fechaFin').valueAsDate;
+  return window.dataTabla.filter(d => {
+    if (!d.fechaJS || isNaN(d.fechaJS)) return false;
+    if (!fi || !ff) return true;
+    const fd = new Date(d.fechaJS.getFullYear(), d.fechaJS.getMonth(), d.fechaJS.getDate());
+    const ini = new Date(fi.getFullYear(), fi.getMonth(), fi.getDate());
+    const fin = new Date(ff.getFullYear(), ff.getMonth(), ff.getDate());
+    return fd >= ini && fd <= fin;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILTROS POR CATEGORÍAS (DESPLEGABLES)
+// ═══════════════════════════════════════════════════════════════
+const filtrosCategoria = {}; // { colIndex: Set([valores seleccionados]) }
+
+function cerrarMenuCategorias() {
+  const m = document.getElementById('menuCategorias');
+  if (m) m.remove();
+  document.querySelectorAll('.btn-col-filter.activo').forEach(b => b.classList.remove('activo'));
+  document.removeEventListener('click', cerrarMenuCategoriasFuera);
+}
+
+function cerrarMenuCategoriasFuera(e) {
+  const menu = document.getElementById('menuCategorias');
+  if (menu && !menu.contains(e.target)) {
+    cerrarMenuCategorias();
+  }
+}
+
+function abrirMenuCategorias(colIdx, btnEl) {
+  cerrarMenuCategorias();
+
+  const menu = document.createElement('div');
+  menu.id = 'menuCategorias';
+  menu.className = 'menu-categorias';
+
+  // Obtener valores únicos de esa columna
+  const data = window.tablaDT.data().toArray();
+  const valoresUnicos = new Set();
+  data.forEach(row => {
+    let val;
+    if (colIdx === 1) val = row.vhlo;
+    else if (colIdx === 2) val = row.deficienciaOriginal;
+    else if (colIdx === 4) val = row.familia;
+    else if (colIdx === 5) val = row.familiaAveria;
+    else return;
+    if (val && val !== '-' && val !== '') valoresUnicos.add(val);
+  });
+
+  const valoresOrdenados = [...valoresUnicos].sort();
+  const titulo = window.tablaDT.column(colIdx).header().textContent.trim();
+
+  // Título
+  const tituloEl = document.createElement('div');
+  tituloEl.className = 'menu-categorias-titulo';
+  tituloEl.textContent = `Filtrar: ${titulo}`;
+  menu.appendChild(tituloEl);
+
+  // Barra de acciones rápidas
+  const barra = document.createElement('div');
+  barra.className = 'menu-categorias-barra';
+  const btnTodas = document.createElement('button');
+  btnTodas.textContent = '✓ Todas';
+  btnTodas.onclick = () => {
+    menu.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+  };
+  const btnNinguna = document.createElement('button');
+  btnNinguna.textContent = '✗ Ninguna';
+  btnNinguna.onclick = () => {
+    menu.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+  };
+  barra.appendChild(btnTodas);
+  barra.appendChild(btnNinguna);
+  menu.appendChild(barra);
+
+  // Lista de checkboxes
+  const lista = document.createElement('div');
+  lista.className = 'menu-categorias-lista';
+
+  const seleccionActual = filtrosCategoria[colIdx] || new Set(valoresOrdenados);
+
+  valoresOrdenados.forEach(val => {
+    const fila = document.createElement('label');
+    fila.className = 'menu-categorias-row';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = val;
+    cb.checked = seleccionActual.has(val);
+
+    const span = document.createElement('span');
+    span.textContent = val;
+    span.style.fontSize = '11px';
+    span.style.overflow = 'hidden';
+    span.style.textOverflow = 'ellipsis';
+    span.style.whiteSpace = 'nowrap';
+    span.style.maxWidth = '220px';
+    span.style.display = 'inline-block';
+
+    fila.appendChild(cb);
+    fila.appendChild(span);
+    lista.appendChild(fila);
+  });
+
+  menu.appendChild(lista);
+
+  // Botón aplicar
+  const btnAplicar = document.createElement('button');
+  btnAplicar.className = 'menu-categorias-aplicar';
+  btnAplicar.textContent = 'Aplicar filtro';
+  btnAplicar.onclick = () => {
+    const seleccionados = new Set();
+    menu.querySelectorAll('input[type=checkbox]:checked').forEach(cb => seleccionados.add(cb.value));
+    filtrosCategoria[colIdx] = seleccionados;
+    btnEl.classList.toggle('activo', seleccionados.size < valoresOrdenados.length);
+    aplicarFiltrosCategorias();
+    cerrarMenuCategorias();
+    actualizarBotonLimpiarFiltros();
+  };
+  menu.appendChild(btnAplicar);
+
+  document.body.appendChild(menu);
+  btnEl.classList.add('activo');
+
+  // Posicionar
+  const rect = btnEl.getBoundingClientRect();
+  requestAnimationFrame(() => {
+    const mW = menu.offsetWidth;
+    const mH = menu.offsetHeight;
+    const top = (rect.bottom + 4 + mH > window.innerHeight)
+      ? Math.max(4, rect.top - mH - 4)
+      : rect.bottom + 4;
+    const left = (rect.left + mW > window.innerWidth)
+      ? Math.max(4, window.innerWidth - mW - 8)
+      : rect.left;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+  });
+
+  setTimeout(() => document.addEventListener('click', cerrarMenuCategoriasFuera), 10);
+}
+
+function aplicarFiltrosCategorias() {
+  $.fn.dataTable.ext.search = [
+    function (settings, row, dataIndex) {
+      const rowData = window.tablaDT.row(dataIndex).data();
+      
+      // Columna 1: VHLO
+      if (filtrosCategoria[1] && filtrosCategoria[1].size > 0) {
+        if (!filtrosCategoria[1].has(rowData.vhlo)) return false;
+      }
+      
+      // Columna 2: Deficiencia
+      if (filtrosCategoria[2] && filtrosCategoria[2].size > 0) {
+        if (!filtrosCategoria[2].has(rowData.deficienciaOriginal)) return false;
+      }
+      
+      // Columna 4: Familia Veh.
+      if (filtrosCategoria[4] && filtrosCategoria[4].size > 0) {
+        if (!filtrosCategoria[4].has(rowData.familia)) return false;
+      }
+      
+      // Columna 5: Familia Avería
+      if (filtrosCategoria[5] && filtrosCategoria[5].size > 0) {
+        if (!filtrosCategoria[5].has(rowData.familiaAveria)) return false;
+      }
+      
+      return true;
+    }
+  ];
+  window.tablaDT.draw();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INICIALIZAR TABLA + FILTROS POR COLUMNA
+// ═══════════════════════════════════════════════════════════════
+function inicializarTabla() {
+  window.tablaDT = $('#tablaReiterativas').DataTable({
+    data: [],
+    columns: [
+      {
+        className: 'dt-control',
+        orderable: false,
+        data: null,
+        defaultContent: '',
+        width: '30px',
+        render: () => '<span style="color:var(--accent);cursor:pointer;font-weight:700;">▶</span>'
+      },
+      { title: 'VHLO', data: 'vhlo' },
+      {
+        title: 'Deficiencia', data: 'deficienciaOriginal',
+        render: d => `<span title="${d}" style="display:block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d}</span>`
+      },
+      {
+        title: 'Veces', data: 'count',
+        render: n => badgeCount(n)
+      },
+      { title: 'Familia Veh.', data: 'familia' },
+      { title: 'Familia Avería', data: 'familiaAveria' },
+      { title: 'Primera vez', data: 'primera', render: formatearFecha },
+      { title: 'Última vez', data: 'ultima', render: formatearFecha },
+      { title: 'Días entre', data: 'diasEntre' },
+      {
+        title: 'Detalle', data: null, orderable: false,
+        render: () => '<button class="btn-expand">🔎 Ver</button>'
+      }
+    ],
+    orderCellsTop: true,
+    order: [[3, 'desc']],
+    pageLength: 25,
+    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+    language: {
+      search: 'Buscar global:',
+      lengthMenu: 'Mostrar _MENU_ registros',
+      info: 'Mostrando _START_ – _END_ de _TOTAL_ combinaciones reiterativas',
+      infoEmpty: 'No hay averías reiterativas en este periodo',
+      infoFiltered: '(filtrado de _MAX_ totales)',
+      zeroRecords: 'No se encontraron combinaciones que cumplan el criterio (≥3 veces)',
+      emptyTable: 'No hay datos disponibles',
+      paginate: { previous: '‹ Ant', next: 'Sig ›' }
+    },
+    dom: '<"top"lf>rt<"bottom"ip><"clear">',
+
+    initComplete: function () {
+      const api = this.api();
+
+      // Crear fila de filtros
+      const filaFiltros = $('<tr class="fila-filtros"></tr>').appendTo('#tablaReiterativas thead');
+
+      // Columnas con desplegable de categorías
+      const colConDesplegable = [1, 2, 4, 5];
+      // Columnas sin filtro
+      const sinFiltro = [0, 3, 6, 7, 8, 9];
+
+      const placeholders = {
+        1: 'Ej: 3109',
+        2: 'Ej: limpieza',
+        4: 'Ej: CARGA',
+        5: 'Ej: LUCES'
+      };
+
+      api.columns().every(function (i) {
+        const th = $('<th></th>').appendTo(filaFiltros);
+        
+        if (sinFiltro.includes(i)) return;
+
+        if (colConDesplegable.includes(i)) {
+          // Input de texto + botón desplegable
+          const wrapper = $('<div style="display:flex;gap:4px;align-items:center;"></div>').appendTo(th);
+          
+          const input = $(`<input type="text" class="col-filter-input" placeholder="${placeholders[i] || 'Buscar...'}" data-col="${i}" style="flex:1;" />`)
+            .appendTo(wrapper)
+            .on('keyup change', function () {
+              const val = this.value;
+              const col = api.column(i);
+              if (col.search() !== val) {
+                col.search(val).draw();
+                $(this).toggleClass('active', val.trim() !== '');
+                actualizarBotonLimpiarFiltros();
+              }
+            });
+
+          const btn = $('<button class="btn-col-filter" title="Filtrar por categorías">🔽</button>')
+            .appendTo(wrapper)
+            .on('click', function (e) {
+              e.stopPropagation();
+              abrirMenuCategorias(i, this);
+            });
+        }
+      });
+    }
+  });
+
+  // Eventos de filas expandibles
+  $('#tablaReiterativas tbody').on('click', 'td.dt-control', function () {
+    const tr = $(this).closest('tr');
+    const row = window.tablaDT.row(tr);
+    toggleDetalle(tr, row);
+  });
+
+  $('#tablaReiterativas tbody').on('click', '.btn-expand', function (e) {
+    e.stopPropagation();
+    const tr = $(this).closest('tr');
+    const row = window.tablaDT.row(tr);
+    toggleDetalle(tr, row);
+  });
+}
+
+function toggleDetalle(tr, row) {
+  if (row.child.isShown()) {
+    tr.removeClass('detalle-row');
+    row.child.hide();
+    tr.find('td.dt-control span').text('▶');
+  } else {
+    tr.addClass('detalle-row');
+    row.child(renderDetalle(row.data())).show();
+    tr.find('td.dt-control span').text('▼');
+  }
+}
+
+function actualizar() {
+  const datos = datosEnRango();
+  const reiterativas = calcularReiterativas(datos);
+
+  window.tablaDT.clear();
+  window.tablaDT.rows.add(reiterativas);
+  window.tablaDT.draw();
+
+  document.getElementById('kpiCombinaciones').textContent = reiterativas.length.toLocaleString('es-ES');
+  const totalAvisos = reiterativas.reduce((s, g) => s + g.count, 0);
+  document.getElementById('kpiTotalAvisos').textContent = totalAvisos.toLocaleString('es-ES');
+
+  const countVeh = {};
+  reiterativas.forEach(g => { countVeh[g.vhlo] = (countVeh[g.vhlo] || 0) + g.count; });
+  const topVeh = Object.entries(countVeh).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById('kpiVehiculoTop').textContent = topVeh ? `${topVeh[0]} (${topVeh[1]})` : '-';
+
+  const countDef = {};
+  reiterativas.forEach(g => { countDef[g.deficienciaOriginal] = (countDef[g.deficienciaOriginal] || 0) + g.count; });
+  const topDef = Object.entries(countDef).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById('kpiDeficienciaTop').textContent = topDef ? `${topDef[0]} (${topDef[1]})` : '-';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOTÓN LIMPIAR FILTROS
+// ═══════════════════════════════════════════════════════════════
+function actualizarBotonLimpiarFiltros() {
+  const hayFiltrosTexto = $('#tablaReiterativas thead tr.fila-filtros input').toArray().some(i => i.value.trim() !== '');
+  const hayFiltrosCategoria = Object.keys(filtrosCategoria).length > 0;
+  document.getElementById('btnLimpiarFiltros').style.display = (hayFiltrosTexto || hayFiltrosCategoria) ? 'inline-block' : 'none';
+}
+
+document.getElementById('btnLimpiarFiltros').addEventListener('click', () => {
+  // Limpiar inputs de texto
+  $('#tablaReiterativas thead tr.fila-filtros input').each(function () {
+    this.value = '';
+    $(this).removeClass('active');
+    const colIdx = parseInt($(this).data('col'));
+    if (!isNaN(colIdx) && window.tablaDT) {
+      window.tablaDT.column(colIdx).search('').draw();
+    }
+  });
+  
+  // Limpiar filtros de categorías
+  Object.keys(filtrosCategoria).forEach(k => delete filtrosCategoria[k]);
+  document.querySelectorAll('.btn-col-filter.activo').forEach(b => b.classList.remove('activo'));
+  $.fn.dataTable.ext.search = [];
+  window.tablaDT.draw();
+  
+  actualizarBotonLimpiarFiltros();
+});
+
+document.getElementById('btnLimpiar').addEventListener('click', () => {
+  document.getElementById('fechaInicio').value = '';
+  document.getElementById('fechaFin').value = '';
+  actualizar();
+});
+
+// Exportar CSV (respeta los filtros activos)
+document.getElementById('btnExportar').addEventListener('click', () => {
+  const data = window.tablaDT.rows({ search: 'applied' }).data().toArray();
+  if (!data.length) { alert('No hay datos para exportar.'); return; }
+  const headers = ['VHLO', 'Deficiencia', 'Veces', 'Familia Vehiculo', 'Familia Averia', 'Primera vez', 'Ultima vez', 'Dias entre'];
+  const rows = data.map(g => [
+    g.vhlo,
+    `"${(g.deficienciaOriginal || '').replace(/"/g, '""')}"`,
+    g.count,
+    g.familia,
+    g.familiaAveria,
+    formatearFecha(g.primera),
+    formatearFecha(g.ultima),
+    g.diasEntre
+  ]);
+  const csv = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `reiterativas_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>

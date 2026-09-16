@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Importar JSON Directo a Supabase — Control Tráfico</title>
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  .container { max-width: 700px; margin: 40px auto; padding: 24px; }
+  .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.9em; margin-bottom: 14px; }
+  .back-link:hover { opacity: 0.7; }
+  .panel { background: var(--chart-bg); border: 1px solid var(--chart-border); border-radius: 12px; padding: 32px; box-shadow: var(--shadow); }
+  .panel h1 { font-size: 1.6em; color: var(--accent); margin-bottom: 8px; }
+  .panel .subtitle { color: var(--text-muted); font-size: 0.95em; margin-bottom: 24px; }
+  
+  .drop-zone { background: var(--bg2); border: 2px dashed var(--border); border-radius: 12px; padding: 48px 32px; text-align: center; transition: all 0.3s; cursor: pointer; position: relative; margin-bottom: 20px; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: var(--bg3); }
+  .drop-zone-icon { font-size: 3em; margin-bottom: 12px; display: block; }
+  .drop-zone-title { font-family: 'Inter', sans-serif; font-size: 1.3em; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .drop-zone-sub { color: var(--text-muted); font-size: 0.85em; margin-bottom: 16px; }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+  .stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 20px; text-align: center; }
+  .stat-label { font-size: 0.75em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'Inter', sans-serif; font-weight: 500; }
+  .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 2.2em; font-weight: 700; color: var(--accent); }
+  .stat-value.ok { color: var(--accent7); }
+  .stat-value.err { color: var(--accent4); }
+  
+  .progress-bar { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; margin: 20px 0; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 5px; transition: width 0.3s; width: 0%; }
+  
+  .log { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 0.8em; max-height: 300px; overflow-y: auto; color: var(--text-muted); }
+  .log-line { margin-bottom: 4px; }
+  .log-line.ok { color: var(--accent); }
+  .log-line.warn { color: var(--accent2); }
+  .log-line.err { color: var(--accent4); }
+  .log-line.info { color: var(--accent3); }
+  
+  .btn { padding: 12px 24px; border-radius: 8px; cursor: pointer; border: none; font-size: 14px; font-weight: 600; margin-top: 16px; font-family: 'Inter', sans-serif; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: var(--bg); }
+  .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  
+  .hidden { display: none !important; }
+  
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; border-radius: 10px; color: white; font-weight: 500; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 99999; animation: slideIn 0.3s ease-out; max-width: 400px; }
+  .toast.exito { background: #10b981; }
+  .toast.error { background: #ef4444; }
+  .toast.info { background: #3b82f6; }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  
+  .info-box { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 0.85em; color: var(--accent3); }
+  .info-box strong { color: var(--text); }
+  
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">◀ Volver al Dashboard</a>
+
+<div class="container">
+  <div class="panel">
+    <h1>📥 Importar JSON Directo a Supabase</h1>
+    <p class="subtitle">Importa TODOS los registros del JSON sin filtros. Normaliza automáticamente claves y valores.</p>
+    
+    <div class="info-box">
+      💡 <strong>¿Qué hace esta página?</strong> Lee tu archivo JSON, normaliza las claves (maneja espacios, guiones bajos, etc.) e inserta todos los registros directamente en la tabla <strong id="tablaDestino">incidencias</strong> de Supabase.
+    </div>
+    
+    <div class="drop-zone" id="dropZone">
+      <span class="drop-zone-icon">📂</span>
+      <div class="drop-zone-title">Arrastra tu JSON aquí</div>
+      <div class="drop-zone-sub">O haz clic para seleccionar</div>
+      <input type="file" id="fileInput" accept=".json">
+    </div>
+
+    <div class="stats-grid hidden" id="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total en JSON</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Importados</div>
+        <div class="stat-value ok" id="statImportados">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Errores</div>
+        <div class="stat-value err" id="statErrores">0</div>
+      </div>
+    </div>
+
+    <div class="progress-bar hidden" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="log hidden" id="logBox"></div>
+  </div>
+</div>
+
+<!-- ✅ Cargar supabase-config.js para usar TABLA_PRINCIPAL -->
+<script src="supabase-config.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// MAPEO DE CLAVES DEL JSON A SUPABASE (snake_case)
+// ═══════════════════════════════════════════════════════════════
+const MAPEO_CLAVES = {
+  'FAMILIA': 'familia', 'VHLO': 'vhlo', 'CONDUCTOR': 'conductor',
+  'FAMILIA AVERIA': 'familia_averia', 'FAMILIA_AVERIA': 'familia_averia',
+  'DEFICIENCIAS DETECTADAS': 'deficiencias', 'DEFICIENCIAS': 'deficiencias',
+  'DESCRIPCION AVERIA': 'descripcion_averia', 'DESCRIPCION_AVERIA': 'descripcion_averia',
+  'FOTO': 'foto', 'FECHA AVISO': 'fecha_aviso', 'FECHA_AVISO': 'fecha_aviso',
+  'HORA': 'hora', 'TURNO': 'turno',
+  'N AVISO': 'n_aviso', 'N  AVISO': 'n_aviso',
+  'Nº AVISO': 'n_aviso',
+  'AVISO ANTIGUO': 'aviso_antiguo', 'AVISO ANTIGUO?': 'aviso_antiguo', 'AVISO_ANTIGUO': 'aviso_antiguo',
+  'ORIGEN AVISO': 'origen_aviso', 'ORIGEN_AVISO': 'origen_aviso',
+  'TIPO ORDEN': 'tipo_orden', 'TIPO_ORDEN': 'tipo_orden',
+  'COLUMNA1': 'columna1', 'COLUMNA2': 'columna2', 'COLUMNA3': 'columna3', 'COLUMNA4': 'columna4',
+  'COLUMN1': 'columna1', 'COLUMN2': 'columna2', 'COLUMN3': 'columna3', 'COLUMN4': 'columna4'
+};
+
+// ═══════════════════════════════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════════════════════════════
+function toast(texto, tipo = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast ${tipo}`;
+  t.textContent = texto;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+function log(msg, tipo = 'info') {
+  const logBox = document.getElementById('logBox');
+  logBox.classList.remove('hidden');
+  const linea = document.createElement('div');
+  linea.className = `log-line ${tipo}`;
+  linea.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logBox.appendChild(linea);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+// Normalizar clave: maneja espacios al final, múltiples espacios, guiones bajos
+function normalizarClave(nombre) {
+  let n = nombre.toString().trim().toUpperCase()
+    .replace(/[¿?]/g, '')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return MAPEO_CLAVES[n] || null;
+}
+
+function normalizarFila(fila) {
+  const resultado = {};
+  for (const key in fila) {
+    const keySup = normalizarClave(key);
+    if (keySup) {
+      let valor = fila[key];
+      if (typeof valor === 'string') valor = valor.trim();
+      if (valor === '' || valor === ' ') valor = null;
+      resultado[keySup] = valor;
+    }
+  }
+  return resultado;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════════════════════════
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) importar(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) importar(e.target.files[0]);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ IMPORTAR (usa TABLA_PRINCIPAL)
+// ═══════════════════════════════════════════════════════════════
+async function importar(file) {
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error('El JSON no es un array');
+      
+      // Mostrar stats
+      document.getElementById('stats').classList.remove('hidden');
+      document.getElementById('progressBar').classList.remove('hidden');
+      document.getElementById('statTotal').textContent = data.length.toLocaleString('es-ES');
+      
+      log(`📊 JSON cargado: ${data.length} registros`, 'info');
+      log(`📋 Tabla destino: ${TABLA_PRINCIPAL}`, 'info');
+      
+      // Normalizar TODAS las filas
+      const datosNormalizados = data.map(normalizarFila);
+      
+      // Opcional: quitar la primera fila si está completamente vacía
+      const primeraFila = datosNormalizados[0];
+      const tieneDatos = Object.values(primeraFila).some(v => v !== null && v !== undefined);
+      const datosFinales = tieneDatos ? datosNormalizados : datosNormalizados.slice(1);
+      
+      log(`✅ ${datosFinales.length} registros listos para importar`, 'ok');
+      
+      // Insertar en lotes de 100
+      const LOTE = 100;
+      let importados = 0;
+      let errores = 0;
+      const totalLotes = Math.ceil(datosFinales.length / LOTE);
+      
+      for (let i = 0; i < datosFinales.length; i += LOTE) {
+        const lote = datosFinales.slice(i, i + LOTE);
+        const numLote = Math.floor(i / LOTE) + 1;
+        
+        log(`📤 Lote ${numLote}/${totalLotes} (${lote.length} registros)...`, 'info');
+        
+        try {
+          // ✅ Usa TABLA_PRINCIPAL en lugar de 'incidencias'
+          const { error } = await supabaseClient
+            .from(TABLA_PRINCIPAL)
+            .insert(lote);
+          
+          if (error) {
+            log(`❌ Error en lote ${numLote}: ${error.message}`, 'err');
+            errores += lote.length;
+          } else {
+            importados += lote.length;
+            log(`✅ Lote ${numLote} completado`, 'ok');
+          }
+        } catch (err) {
+          log(`❌ Error en lote ${numLote}: ${err.message}`, 'err');
+          errores += lote.length;
+        }
+        
+        const pct = Math.round(((i + lote.length) / datosFinales.length) * 100);
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('statImportados').textContent = importados.toLocaleString('es-ES');
+        document.getElementById('statErrores').textContent = errores.toLocaleString('es-ES');
+      }
+      
+      log(`🎉 ¡COMPLETADO! ${importados} importados, ${errores} errores`, 'ok');
+      toast(`✅ ${importados} registros importados a ${TABLA_PRINCIPAL}`, 'exito');
+      
+    } catch (err) {
+      log(`❌ ERROR: ${err.message}`, 'err');
+      toast('❌ Error: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Mostrar nombre de tabla al cargar
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('tablaDestino').textContent = TABLA_PRINCIPAL;
+</script>
+
+</body>
+</html>

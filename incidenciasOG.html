@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incidencias — Editable | Control Tráfico</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReorder.dataTables.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        td.celda-editable { cursor: pointer; transition: background 0.15s; position: relative; }
+        td.celda-editable:hover { background: rgba(20, 184, 166, 0.1) !important; outline: 1px dashed var(--accent); }
+        td.celda-editable::after { content: '✎'; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--accent); opacity: 0; transition: opacity 0.15s; }
+        td.celda-editable:hover::after { opacity: 0.7; }
+        td input.edit-input { width: 100%; padding: 6px 8px; background: var(--input-bg); color: var(--input-text); border: 2px solid var(--accent); border-radius: 6px; font-size: 12px; font-family: 'Inter', sans-serif; outline: none; box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2); }
+        td.guardando { background: rgba(245, 158, 11, 0.15) !important; color: var(--accent2); font-style: italic; }
+        td.error { background: rgba(239, 68, 68, 0.15) !important; animation: shake 0.4s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+        td.guardado { background: rgba(16, 185, 129, 0.15) !important; transition: background 1.5s; }
+        .btn-eliminar { background: transparent; color: var(--accent4); border: 1px solid var(--accent4); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: all 0.2s; }
+        .btn-eliminar:hover { background: var(--accent4); color: white; }
+        .btn-nueva { background: var(--accent); color: var(--bg); border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; }
+        .btn-nueva:hover { opacity: 0.9; transform: translateY(-1px); }
+        .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; border-radius: 10px; color: white; font-weight: 500; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 99999; animation: slideIn 0.3s ease-out; max-width: 400px; }
+        .toast.exito { background: #10b981; } .toast.error { background: #ef4444; } .toast.info { background: #3b82f6; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .contador { background: var(--kpi-bg); border: 1px solid var(--kpi-border); border-radius: 10px; padding: 12px 20px; display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text); }
+        .contador strong { color: var(--accent); font-size: 1.3em; font-family: 'Rajdhani', sans-serif; }
+        .ayuda { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 10px 16px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+        .ayuda strong { color: var(--accent3); }
+        .panel-filtros { background: var(--chart-bg); border: 1px solid var(--chart-border); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+        .filtros-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+        .btn-filtro { display: inline-flex; align-items: center; gap: 6px; background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border); padding: 7px 14px; border-radius: 8px; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .btn-filtro:hover { background: var(--btn-hover); color: var(--btn-hover-text); border-color: var(--btn-hover); transform: translateY(-1px); }
+        .btn-filtro.activo { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        .filtro-tag.filtro-excluido { background: var(--accent4) !important; color: #ffffff !important; }
+        .sep-filtros { width: 1px; height: 28px; background: var(--border); margin: 0 4px; }
+        .busqueda-desc { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+        .busqueda-desc input { flex: 1; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-family: 'Inter', sans-serif; }
+        .busqueda-desc input:focus { outline: none; border-color: var(--accent); }
+        .excl-menu { position: fixed; z-index: 9999; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); width: 280px; padding: 16px; font-size: 12px; }
+        .excl-title { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .excl-barra { display: flex; gap: 8px; margin-bottom: 12px; }
+        .excl-barra button { flex: 1; font-size: 11px; padding: 6px 0; }
+        .excl-lista { max-height: 250px; overflow-y: auto; margin-bottom: 12px; }
+        .excl-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; border-radius: 6px; color: var(--text); transition: background 0.2s; }
+        .excl-row:hover { background: var(--bg3); }
+        .excl-row input[type=checkbox], .excl-row input[type=radio] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+        .excl-aplicar { width: 100%; background: var(--accent); color: var(--bg); font-weight: 600; border: none; padding: 10px; border-radius: 8px; cursor: pointer; transition: opacity 0.2s; }
+        .excl-aplicar:hover { opacity: 0.85; }
+        .col-menu { position: absolute; z-index: 9999; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; box-shadow: var(--shadow-lg); min-width: 200px; display: none; }
+        .col-menu label { display: flex; align-items: center; gap: 8px; padding: 6px 0; color: var(--text); font-size: 12px; cursor: pointer; }
+        .col-menu input { accent-color: var(--accent); }
+    </style>
+    
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="header">
+    <h1>📝 Incidencias - Parque Central <span style="font-size:0.6em;color:var(--text-muted);font-weight:400;">— Editable</span></h1>
+    <a href="index.html" class="btn-nav">🏠 Dashboard</a>
+    <a href="reiteradas.html" class="btn-nav">✔Averias Reiterativas</a>
+    <a href="pegar.html" class="btn-nav">📥 Pegar Datos</a>
+    <button id="btnNueva" class="btn-nueva">➕ Nueva incidencia</button>
+    <button id="toggleModo" class="btn-nav">☀ Modo claro</button>
+</div>
+
+<div class="panel-filtros">
+    <div class="controls" style="margin-bottom: 12px;">
+        <label>📅 Desde: <input type="date" id="fechaInicio"></label>
+        <label>📅 Hasta: <input type="date" id="fechaFin"></label>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button id="btnAtras" class="btn-nav" title="Deshacer filtro">◀ Atrás</button>
+            <button id="btnAdelante" class="btn-nav" title="Rehacer filtro">Adelante ▶</button>
+            <button id="btnLimpiar" class="btn-nav" title="Limpiar todos los filtros">✕ Limpiar filtros</button>
+            <button id="btnRecargar" class="btn-nav">🔄 Recargar</button>
+            <button id="btnColumnas" class="btn-nav" style="position:relative;">👁 Columnas</button>
+            <!-- ✅ NUEVO: Botón Exportar CSV -->
+            <button id="btnExportarCSV" class="btn-nav">📥 Exportar CSV</button>
+            <div class="contador">📊 <strong id="totalRegistros">0</strong> incidencias</div>
+        </div>
+    </div>
+    
+    <div class="filtros-grid">
+        <button class="btn-filtro" data-campo="familia">🚛 Familia Vehículo</button>
+        <button class="btn-filtro" data-campo="vhlo">🔢 Vehículo (VHLO)</button>
+        <button class="btn-filtro" data-campo="familia_averia">🔧 Familia Avería</button>
+        <button class="btn-filtro" data-campo="turno">🕐 Turno</button>
+        <button class="btn-filtro" data-campo="origen_aviso">📍 Origen Aviso</button>
+        <button class="btn-filtro" data-campo="tipo_orden">📋 Tipo Orden</button>
+        <button class="btn-filtro" data-campo="conductor"> Conductor</button>
+        <button class="btn-filtro" data-campo="deficiencias">⚠️ Deficiencias</button>
+        <div class="sep-filtros"></div>
+        <button class="btn-filtro" data-campo-especial="recurrencia">🔄 Recurrencia</button>
+        <button class="btn-filtro" data-campo-especial="subfamilia_trasera">🚚 Subfamilia Trasera</button>
+        <button class="btn-filtro" data-campo-especial="subfamilia_lateral">📦 Subfamilia Lateral</button>
+    </div>
+    
+    <div class="busqueda-desc">
+        <label style="color:var(--text-muted); font-size:12px; font-weight:500; white-space:nowrap;"> Buscar descripción:</label>
+        <input type="text" id="buscarDescripcion" placeholder="Escribe para filtrar por descripción de avería...">
+    </div>
+</div>
+
+<div id="filtrosActivos" class="filtros-activos"></div>
+
+<div class="ayuda">
+     <strong>Clic en cualquier celda</strong> para editarla · <strong>Enter</strong> para guardar · <strong>Esc</strong> para cancelar · Usa los botones de arriba para filtrar por categoría
+</div>
+
+<div style="background:var(--chart-bg); border:1px solid var(--chart-border); border-radius:12px; padding:20px; box-shadow:var(--shadow);">
+    <table id="tablaIncidencias" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Fecha Aviso</th>
+                <th>Hora</th>
+                <th>Turno</th>
+                <th>VHLO</th>
+                <th>Familia</th>
+                <th>Conductor</th>
+                <th>Familia Avería</th>
+                <th>Deficiencias</th>
+                <th>Descripción Avería</th>
+                <th>Origen Aviso</th>
+                <th>Tipo Orden</th>
+                <th>Nº Aviso</th>
+                <th>Foto</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<div class="col-menu" id="colMenu"></div>
+
+<script src="supabase-config.js"></script>
+
+<script>
+let tablaDT;
+let datosOriginales = [];
+let datosFiltrados = [];
+let modoOscuro = localStorage.getItem('ct_modo') !== 'light';
+let filtrosActivos = {};
+let exclusiones = {};
+let historial = [];
+let historialIdx = -1;
+
+const MAPA_TIPO_ORDEN = { 'L02': 'Accidente', 'L05': 'Golpe / Mal Uso' };
+const ETIQUETA_AVERIA = 'Avería';
+
+const MAPEO_COLUMNAS = { 1: 'fecha_aviso', 2: 'hora', 3: 'turno', 4: 'vhlo', 5: 'familia', 6: 'conductor', 7: 'familia_averia', 8: 'deficiencias', 9: 'descripcion_averia', 10: 'origen_aviso', 11: 'tipo_orden', 12: 'n_aviso', 13: 'foto' };
+const COLUMNAS_NO_EDITABLES = [0, 14];
+
+if (!modoOscuro) document.body.classList.add('light-mode');
+
+function getEtiquetaTipoOrden(codigo) { const cod = (codigo || '').toString().trim().toUpperCase(); if (!cod || cod === '****') return null; return MAPA_TIPO_ORDEN[cod] || ETIQUETA_AVERIA; }
+function getCodigosParaEtiqueta(etiqueta) { if (etiqueta === 'Accidente') return ['L02']; if (etiqueta === 'Golpe / Mal Uso') return ['L05']; if (etiqueta === ETIQUETA_AVERIA) return { modo: 'resto' }; return []; }
+function getSubfamiliaTrasera(vhlo, familia) { if (familia && familia.toUpperCase().includes('MINICOMPACTADOR')) return 'MINICOMPACTADORES'; const n = parseInt(vhlo); if (isNaN(n)) return null; if (n === 140 || n === 146) return 'MEDIANOS'; if (n >= 142 && n <= 183) return '2 EJES'; if (n >= 1170 && n <= 1172) return 'ECONIC ELECTRICOS'; if (n >= 1173 && n <= 1179) return 'VOLVO'; return null; }
+function getSubfamiliaLateral(vhlo) { const n = parseInt(vhlo); if (isNaN(n)) return null; if (n >= 1100 && n <= 1121) return 'FARID ANTIGUOS'; if (n >= 1135 && n <= 1138) return 'FARID NUEVOS'; if (n >= 1130 && n <= 1334) return 'OMB'; if (n >= 3100 && n <= 3123) return 'WASTERRENT'; if (n >= 1121 && n <= 1128) return 'AMS'; return null; }
+function normStr(s) { return s.toString().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(); }
+
+function toast(texto, tipo = 'info') { const t = document.createElement('div'); t.className = `toast ${tipo}`; t.textContent = texto; document.body.appendChild(t); setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500); }
+
+async function cargarDatos() {
+    try {
+        toast('🔄 Cargando datos...', 'info');
+        const datos = await obtenerIncidencias();
+        const CAMPOS_NORM = ['familia_averia', 'familia', 'origen_aviso', 'turno', 'vhlo', 'tipo_orden'];
+        datos.forEach(d => { CAMPOS_NORM.forEach(k => { if (d[k]) d[k] = normStr(d[k]); }); try { if (!d.fecha_aviso) return; const parts = d.fecha_aviso.split('/').map(Number); if (parts.length !== 3 || parts.some(isNaN)) return; const fecha = new Date(parts[2], parts[1] - 1, parts[0]); if (!isNaN(fecha)) d.fechaJS = fecha; } catch (e) {} });
+        datosOriginales = datos;
+        calcularRangoFechas(datos);
+        if (!tablaDT) inicializarTabla();
+        aplicarFiltros();
+        toast(`✅ ${datos.length} incidencias cargadas`, 'exito');
+    } catch (error) { console.error('Error al cargar:', error); toast('❌ Error: ' + error.message, 'error'); }
+}
+
+function calcularRangoFechas(datos) { const fechas = datos.filter(d => d.fechaJS && !isNaN(d.fechaJS)).map(d => d.fechaJS); if (fechas.length > 0) { document.getElementById('fechaInicio').valueAsDate = new Date(Math.min(...fechas)); document.getElementById('fechaFin').valueAsDate = new Date(Math.max(...fechas)); } }
+
+function inicializarTabla() {
+    tablaDT = $('#tablaIncidencias').DataTable({
+        data: [],
+        columns: [
+            { title: 'ID', data: 'id', width: '60px' },
+            { title: 'Fecha Aviso', data: 'fecha_aviso', width: '100px' },
+            { title: 'Hora', data: 'hora', width: '70px' },
+            { title: 'Turno', data: 'turno', width: '70px' },
+            { title: 'VHLO', data: 'vhlo', width: '80px' },
+            { title: 'Familia', data: 'familia', width: '120px' },
+            { title: 'Conductor', data: 'conductor', width: '100px' },
+            { title: 'Familia Avería', data: 'familia_averia', width: '120px' },
+            { title: 'Deficiencias', data: 'deficiencias', width: '150px' },
+            { title: 'Descripción', data: 'descripcion_averia', width: '220px', render: function(d) { return d ? `<span title="${d}" style="display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d}</span>` : '-'; } },
+            { title: 'Origen', data: 'origen_aviso', width: '100px' },
+            { title: 'Tipo Orden', data: 'tipo_orden', width: '90px' },
+            { title: 'Nº Aviso', data: 'n_aviso', width: '110px' },
+            { title: 'Foto', data: 'foto', width: '60px' },
+            { title: 'Acciones', width: '100px', orderable: false, searchable: false, render: function(data, type, row) { return `<button class="btn-eliminar" data-id="${row.id}">️ Eliminar</button>`; } }
+        ],
+        orderCellsTop: true, colReorder: true, scrollX: true, pageLength: 25, lengthChange: true, order: [[0, 'desc']],
+        dom: '<"top"lf>rt<"bottom"ip><"clear">',
+        language: { search: 'Buscar:', lengthMenu: 'Mostrar _MENU_ registros', info: 'Mostrando _START_ – _END_ de _TOTAL_ registros', infoEmpty: 'Mostrando 0 – 0 de 0 registros', infoFiltered: '(filtrado de _MAX_ registros totales)', zeroRecords: 'No se encontraron resultados', emptyTable: 'No hay datos disponibles', paginate: { previous: '‹ Ant', next: 'Sig ›' } },
+        lengthMenu: [[10, 25, 50, 100, 200, -1], [10, 25, 50, 100, 200, "Todos"]],
+        drawCallback: function() { marcarCeldasEditables(); setTimeout(crearInputPaginaManual, 100); }
+    });
+}
+
+function crearInputPaginaManual() {
+    const paginacion = document.querySelector('#tablaIncidencias_paginate');
+    if (!paginacion) return;
+    const existingWrap = document.getElementById('paginaManualWrap');
+    if (existingWrap) existingWrap.remove();
+    const wrap = document.createElement('span');
+    wrap.id = 'paginaManualWrap';
+    wrap.className = 'pagina-manual';
+    const total = tablaDT.page.info().pages;
+    const pagActual = tablaDT.page.info().page + 1;
+    wrap.innerHTML = `<span>Ir a:</span><input type="number" id="inputPagina" min="1" max="${total}" value="${pagActual}"><button id="btnIrPagina">Ir</button><span class="total-pag">de <strong id="totalPaginas">${total}</strong></span>`;
+    paginacion.appendChild(wrap);
+    const input = document.getElementById('inputPagina');
+    const btn = document.getElementById('btnIrPagina');
+    function irAPagina() { let num = parseInt(input.value); const totalPages = tablaDT.page.info().pages; if (isNaN(num) || num < 1) { input.value = 1; tablaDT.page(0).draw(false); return; } if (num > totalPages) { input.value = totalPages; tablaDT.page(totalPages - 1).draw(false); return; } tablaDT.page(num - 1).draw(false); setTimeout(() => { input.focus(); input.select(); }, 100); }
+    input.addEventListener('focus', () => input.select());
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); irAPagina(); } });
+    btn.addEventListener('click', e => { e.preventDefault(); irAPagina(); });
+}
+
+$('#tablaIncidencias').on('draw.dt', function() { setTimeout(crearInputPaginaManual, 100); });
+
+function marcarCeldasEditables() { $('#tablaIncidencias tbody td').each(function() { if (!COLUMNAS_NO_EDITABLES.includes($(this).index())) $(this).addClass('celda-editable'); }); }
+
+$('#tablaIncidencias tbody').on('click', 'td.celda-editable', function() {
+    const celda = $(this);
+    if (celda.find('input').length > 0) return;
+    const colIndex = celda.index();
+    const fila = celda.closest('tr');
+    const row = tablaDT.row(fila);
+    const rowData = row.data();
+    const id = rowData.id;
+    const campoSupabase = MAPEO_COLUMNAS[colIndex];
+    const valorActual = rowData[campoSupabase] || '';
+    if (!campoSupabase) { toast('⚠️ Esta columna no se puede editar', 'error'); return; }
+    const input = $(`<input type="text" class="edit-input" value="">`);
+    input.val(valorActual);
+    celda.empty().append(input);
+    input.focus().select();
+    function guardar() {
+        const nuevoValor = input.val().trim();
+        if (nuevoValor === valorActual) { celda.text(valorActual); return; }
+        celda.addClass('guardando').text('⏳ Guardando...');
+        actualizarIncidencia(id, { [campoSupabase]: nuevoValor }).then(() => { rowData[campoSupabase] = nuevoValor; row.data(rowData).draw(false); toast(`✅ Campo actualizado`, 'exito'); const orig = datosOriginales.find(d => d.id === id); if (orig) orig[campoSupabase] = nuevoValor; }).catch(error => { console.error('Error al actualizar:', error); celda.removeClass('guardando').addClass('error'); celda.text(valorActual); setTimeout(() => celda.removeClass('error'), 1500); toast('❌ Error al guardar: ' + error.message, 'error'); });
+    }
+    input.on('blur', guardar);
+    input.on('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); input.off('blur'); guardar(); } else if (e.key === 'Escape') { input.off('blur'); celda.text(valorActual); } });
+});
+
+$('#tablaIncidencias tbody').on('click', '.btn-eliminar', async function(e) {
+    e.stopPropagation();
+    const id = $(this).data('id');
+    if (!confirm(`¿Seguro que quieres eliminar la incidencia #${id}?\n\nEsta acción no se puede deshacer.`)) return;
+    try { await eliminarIncidencia(id); toast(`✅ Incidencia #${id} eliminada`, 'exito'); await cargarDatos(); } catch (error) { console.error('Error al eliminar:', error); toast('❌ Error al eliminar: ' + error.message, 'error'); }
+});
+
+document.getElementById('btnNueva').addEventListener('click', async function() {
+    const nuevaIncidencia = { fecha_aviso: new Date().toLocaleDateString('es-ES'), hora: '', turno: '', vhlo: '', familia: '', conductor: '', familia_averia: '', deficiencias: '', descripcion_averia: 'NUEVA - Editar campos', origen_aviso: '', tipo_orden: '', n_aviso: '', foto: 'NO' };
+    try { toast('🔄 Creando nueva incidencia...', 'info'); await insertarIncidencias([nuevaIncidencia]); toast('✅ Nueva incidencia creada', 'exito'); setTimeout(() => cargarDatos(), 500); } catch (error) { console.error('Error al crear:', error); toast('❌ Error: ' + error.message, 'error'); }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 🆕 EXPORTAR CSV (igual que en reiteradas.html)
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('btnExportarCSV').addEventListener('click', () => {
+    if (datosFiltrados.length === 0) {
+        toast('⚠️ No hay datos para exportar', 'error');
+        return;
+    }
+    
+    // BOM para que Excel abra correctamente caracteres especiales (ñ, acentos)
+    let csv = '\uFEFF';
+    
+    // Cabecera
+    csv += 'ID;Fecha Aviso;Hora;Turno;VHLO;Familia;Conductor;Familia Avería;Deficiencias;Descripción Avería;Origen Aviso;Tipo Orden;Nº Aviso;Foto\n';
+    
+    // Filas
+    datosFiltrados.forEach(d => {
+        const fila = [
+            d.id || '',
+            d.fecha_aviso || '',
+            d.hora || '',
+            d.turno || '',
+            d.vhlo || '',
+            d.familia || '',
+            d.conductor || '',
+            d.familia_averia || '',
+            d.deficiencias || '',
+            d.descripcion_averia || '',
+            d.origen_aviso || '',
+            d.tipo_orden || '',
+            d.n_aviso || '',
+            d.foto || ''
+        ];
+        // Envolver cada campo entre comillas para evitar problemas con ; dentro del texto
+        csv += fila.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(';') + '\n';
+    });
+    
+    // Descargar
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fecha = new Date().toISOString().split('T')[0];
+    a.download = `incidencias_${fecha}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    toast(`📥 Exportadas ${datosFiltrados.length} incidencias`, 'exito');
+});
+
+// ═══════════════════════════════════════════════════════════════
+// FILTROS POR CATEGORÍA
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.btn-filtro[data-campo]').forEach(btn => { btn.addEventListener('click', function(e) { e.stopPropagation(); const campo = this.dataset.campo; abrirMenuFiltro(campo, this); }); });
+document.querySelectorAll('.btn-filtro[data-campo-especial]').forEach(btn => { btn.addEventListener('click', function(e) { e.stopPropagation(); const especial = this.dataset.campoEspecial; if (especial === 'recurrencia') abrirMenuRecurrencia(this); else if (especial === 'subfamilia_trasera') abrirMenuSubfamiliaTrasera(this); else if (especial === 'subfamilia_lateral') abrirMenuSubfamiliaLateral(this); }); });
+
+function abrirMenuFiltro(campo, anchorEl) {
+    cerrarMenus();
+    const valores = [...new Set(datosOriginales.map(d => (d[campo] || '').toString().trim().toUpperCase()).filter(v => v && v !== '' && v !== '****'))].sort();
+    const menu = document.createElement('div'); menu.id = 'menuExcl'; menu.className = 'excl-menu';
+    const tit = document.createElement('div'); tit.className = 'excl-title'; tit.textContent = 'Filtrar: ' + campo.replace('_', ' '); menu.appendChild(tit);
+    const bar = document.createElement('div'); bar.className = 'excl-barra';
+    const bT = document.createElement('button'); bT.textContent = '✓ Todo'; bT.onclick = () => menu.querySelectorAll('input').forEach(c => c.checked = true);
+    const bN = document.createElement('button'); bN.textContent = '✗ Ninguno'; bN.onclick = () => menu.querySelectorAll('input').forEach(c => c.checked = false);
+    bar.appendChild(bT); bar.appendChild(bN); menu.appendChild(bar);
+    const lista = document.createElement('div'); lista.className = 'excl-lista';
+    const excAct = exclusiones[campo] || new Set();
+    valores.forEach(val => { const row = document.createElement('label'); row.className = 'excl-row'; const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = val; cb.checked = !excAct.has(val); const sp = document.createElement('span'); sp.textContent = val; row.appendChild(cb); row.appendChild(sp); lista.appendChild(row); });
+    menu.appendChild(lista);
+    const btn = document.createElement('button'); btn.className = 'excl-aplicar'; btn.textContent = 'Aplicar';
+    btn.onclick = () => { const ex = new Set(); menu.querySelectorAll('input').forEach(cb => { if (!cb.checked) ex.add(cb.value); }); exclusiones[campo] = ex; pushHistorial(); renderTags(); aplicarFiltros(); cerrarMenus(); };
+    menu.appendChild(btn);
+    document.body.appendChild(menu);
+    const r = anchorEl.getBoundingClientRect();
+    requestAnimationFrame(() => { const mW = menu.offsetWidth, mH = menu.offsetHeight; const top = (r.bottom + 4 + mH > window.innerHeight) ? Math.max(4, r.top - mH - 4) : r.bottom + 4; const left = (r.left + mW > window.innerWidth) ? Math.max(4, window.innerWidth - mW - 8) : r.left; menu.style.top = top + 'px'; menu.style.left = left + 'px'; });
+    setTimeout(() => document.addEventListener('click', cerrarAlFuera), 10);
+}
+
+function abrirMenuRecurrencia(anchorEl) {
+    cerrarMenus();
+    const menu = document.createElement('div'); menu.id = 'menuExcl'; menu.className = 'excl-menu';
+    const tit = document.createElement('div'); tit.className = 'excl-title'; tit.textContent = 'Filtrar por Recurrencia'; menu.appendChild(tit);
+    const lista = document.createElement('div'); lista.className = 'excl-lista';
+    const opciones = [{ valor: '', texto: '🔄 Todos (sin filtro)' }, { valor: 'unicos', texto: '✅ Únicos (1 avería)' }, { valor: 'reincidentes', texto: '⚠️ Reincidentes (≥2 averías)' }];
+    opciones.forEach(op => { const row = document.createElement('label'); row.className = 'excl-row'; const rb = document.createElement('input'); rb.type = 'radio'; rb.name = 'recurrencia'; rb.value = op.valor; rb.checked = (filtrosActivos['_REINCIDENCIA'] || '') === op.valor; const sp = document.createElement('span'); sp.textContent = op.texto; row.appendChild(rb); row.appendChild(sp); lista.appendChild(row); });
+    menu.appendChild(lista);
+    const btn = document.createElement('button'); btn.className = 'excl-aplicar'; btn.textContent = 'Aplicar';
+    btn.onclick = () => { const selected = menu.querySelector('input[name="recurrencia"]:checked'); if (selected && selected.value) filtrosActivos['_REINCIDENCIA'] = selected.value; else delete filtrosActivos['_REINCIDENCIA']; pushHistorial(); renderTags(); aplicarFiltros(); cerrarMenus(); };
+    menu.appendChild(btn);
+    document.body.appendChild(menu);
+    posicionarMenu(menu, anchorEl);
+    setTimeout(() => document.addEventListener('click', cerrarAlFuera), 10);
+}
+
+function abrirMenuSubfamiliaTrasera(anchorEl) {
+    cerrarMenus();
+    const subfamilias = [...new Set(datosOriginales.map(d => getSubfamiliaTrasera(d.vhlo, d.familia)).filter(s => s))].sort();
+    const menu = document.createElement('div'); menu.id = 'menuExcl'; menu.className = 'excl-menu';
+    const tit = document.createElement('div'); tit.className = 'excl-title'; tit.textContent = 'Filtrar: Subfamilia Trasera'; menu.appendChild(tit);
+    const lista = document.createElement('div'); lista.className = 'excl-lista';
+    const rowAll = document.createElement('label'); rowAll.className = 'excl-row'; const rbAll = document.createElement('input'); rbAll.type = 'radio'; rbAll.name = 'subf_trasera'; rbAll.value = ''; rbAll.checked = !filtrosActivos['_SUBFAMILIA_TRASERA']; const spAll = document.createElement('span'); spAll.textContent = '🔄 Todas'; rowAll.appendChild(rbAll); rowAll.appendChild(spAll); lista.appendChild(rowAll);
+    subfamilias.forEach(sub => { const row = document.createElement('label'); row.className = 'excl-row'; const rb = document.createElement('input'); rb.type = 'radio'; rb.name = 'subf_trasera'; rb.value = sub; rb.checked = filtrosActivos['_SUBFAMILIA_TRASERA'] === sub; const sp = document.createElement('span'); sp.textContent = sub; row.appendChild(rb); row.appendChild(sp); lista.appendChild(row); });
+    menu.appendChild(lista);
+    const btn = document.createElement('button'); btn.className = 'excl-aplicar'; btn.textContent = 'Aplicar';
+    btn.onclick = () => { const selected = menu.querySelector('input[name="subf_trasera"]:checked'); if (selected && selected.value) filtrosActivos['_SUBFAMILIA_TRASERA'] = selected.value; else delete filtrosActivos['_SUBFAMILIA_TRASERA']; pushHistorial(); renderTags(); aplicarFiltros(); cerrarMenus(); };
+    menu.appendChild(btn);
+    document.body.appendChild(menu);
+    posicionarMenu(menu, anchorEl);
+    setTimeout(() => document.addEventListener('click', cerrarAlFuera), 10);
+}
+
+function abrirMenuSubfamiliaLateral(anchorEl) {
+    cerrarMenus();
+    const subfamilias = [...new Set(datosOriginales.map(d => getSubfamiliaLateral(d.vhlo)).filter(s => s))].sort();
+    const menu = document.createElement('div'); menu.id = 'menuExcl'; menu.className = 'excl-menu';
+    const tit = document.createElement('div'); tit.className = 'excl-title'; tit.textContent = 'Filtrar: Subfamilia Lateral'; menu.appendChild(tit);
+    const lista = document.createElement('div'); lista.className = 'excl-lista';
+    const rowAll = document.createElement('label'); rowAll.className = 'excl-row'; const rbAll = document.createElement('input'); rbAll.type = 'radio'; rbAll.name = 'subf_lateral'; rbAll.value = ''; rbAll.checked = !filtrosActivos['_SUBFAMILIA_LATERAL']; const spAll = document.createElement('span'); spAll.textContent = '🔄 Todas'; rowAll.appendChild(rbAll); rowAll.appendChild(spAll); lista.appendChild(rowAll);
+    subfamilias.forEach(sub => { const row = document.createElement('label'); row.className = 'excl-row'; const rb = document.createElement('input'); rb.type = 'radio'; rb.name = 'subf_lateral'; rb.value = sub; rb.checked = filtrosActivos['_SUBFAMILIA_LATERAL'] === sub; const sp = document.createElement('span'); sp.textContent = sub; row.appendChild(rb); row.appendChild(sp); lista.appendChild(row); });
+    menu.appendChild(lista);
+    const btn = document.createElement('button'); btn.className = 'excl-aplicar'; btn.textContent = 'Aplicar';
+    btn.onclick = () => { const selected = menu.querySelector('input[name="subf_lateral"]:checked'); if (selected && selected.value) filtrosActivos['_SUBFAMILIA_LATERAL'] = selected.value; else delete filtrosActivos['_SUBFAMILIA_LATERAL']; pushHistorial(); renderTags(); aplicarFiltros(); cerrarMenus(); };
+    menu.appendChild(btn);
+    document.body.appendChild(menu);
+    posicionarMenu(menu, anchorEl);
+    setTimeout(() => document.addEventListener('click', cerrarAlFuera), 10);
+}
+
+function posicionarMenu(menu, anchorEl) { const r = anchorEl.getBoundingClientRect(); requestAnimationFrame(() => { const mW = menu.offsetWidth, mH = menu.offsetHeight; const top = (r.bottom + 4 + mH > window.innerHeight) ? Math.max(4, r.top - mH - 4) : r.bottom + 4; const left = (r.left + mW > window.innerWidth) ? Math.max(4, window.innerWidth - mW - 8) : r.left; menu.style.top = top + 'px'; menu.style.left = left + 'px'; }); }
+function cerrarMenus() { const m = document.getElementById('menuExcl'); if (m) m.remove(); }
+function cerrarAlFuera(e) { const m = document.getElementById('menuExcl'); if (m && !m.contains(e.target)) m.remove(); document.removeEventListener('click', cerrarAlFuera); }
+
+// ═══════════════════════════════════════════════════════════════
+// APLICAR TODOS LOS FILTROS
+// ═══════════════════════════════════════════════════════════════
+function aplicarFiltros() {
+    const fi = document.getElementById('fechaInicio').valueAsDate;
+    const ff = document.getElementById('fechaFin').valueAsDate;
+    let datos = datosOriginales.filter(d => { if (!d.fechaJS || isNaN(d.fechaJS)) return false; if (!fi || !ff) return true; const dDate = new Date(d.fechaJS.getFullYear(), d.fechaJS.getMonth(), d.fechaJS.getDate()); const fiDate = new Date(fi.getFullYear(), fi.getMonth(), fi.getDate()); const ffDate = new Date(ff.getFullYear(), ff.getMonth(), ff.getDate()); return dDate >= fiDate && dDate <= ffDate; });
+    for (const campo in exclusiones) { if (exclusiones[campo].size) datos = datos.filter(d => !exclusiones[campo].has((d[campo] || '').toString().trim().toUpperCase())); }
+    const camposDirectos = ['familia_averia', 'familia', 'origen_aviso', 'turno', 'vhlo', 'tipo_orden', 'conductor', 'deficiencias'];
+    for (const k in filtrosActivos) { if (!filtrosActivos[k]) continue; if (k.startsWith('_')) continue; if (!camposDirectos.includes(k)) continue; datos = datos.filter(d => d[k] && d[k].toString().trim().toUpperCase() === filtrosActivos[k].toString().trim().toUpperCase()); }
+    const buscarDesc = document.getElementById('buscarDescripcion').value.trim().toUpperCase();
+    if (buscarDesc) datos = datos.filter(d => (d.descripcion_averia || '').toUpperCase().includes(buscarDesc));
+    if (filtrosActivos['_TIPO_ORDEN_LABEL']) { const etiqueta = filtrosActivos['_TIPO_ORDEN_LABEL']; const mapping = getCodigosParaEtiqueta(etiqueta); if (mapping && mapping.modo === 'resto') datos = datos.filter(d => { const cod = (d['tipo_orden'] || '').toString().trim().toUpperCase(); return cod && cod !== 'L02' && cod !== 'L05' && cod !== '****'; }); else if (Array.isArray(mapping) && mapping.length) datos = datos.filter(d => mapping.includes((d['tipo_orden'] || '').toString().trim().toUpperCase())); }
+    if (filtrosActivos['_REINCIDENCIA']) { const tipo = filtrosActivos['_REINCIDENCIA']; const vhCountBase = {}; datos.forEach(d => { const v = d.vhlo; if (!v || v === '****') return; vhCountBase[v] = (vhCountBase[v] || 0) + 1; }); if (tipo === 'unicos') { const unicosSet = new Set(Object.entries(vhCountBase).filter(([_, n]) => n === 1).map(([v, _]) => v)); datos = datos.filter(d => unicosSet.has(d.vhlo)); } else if (tipo === 'reincidentes') { const reincidentesSet = new Set(Object.entries(vhCountBase).filter(([_, n]) => n >= 2).map(([v, _]) => v)); datos = datos.filter(d => reincidentesSet.has(d.vhlo)); } }
+    if (filtrosActivos['_SUBFAMILIA_TRASERA']) { const subFam = filtrosActivos['_SUBFAMILIA_TRASERA']; datos = datos.filter(d => getSubfamiliaTrasera(d['vhlo'], d['familia']) === subFam); }
+    if (filtrosActivos['_SUBFAMILIA_LATERAL']) { const subFam = filtrosActivos['_SUBFAMILIA_LATERAL']; datos = datos.filter(d => getSubfamiliaLateral(d['vhlo']) === subFam); }
+    datosFiltrados = datos;
+    if (tablaDT) { tablaDT.clear(); tablaDT.rows.add(datos); tablaDT.draw(); }
+    document.getElementById('totalRegistros').textContent = datos.length;
+    actualizarBotones();
+}
+
+function renderTags() {
+    const cont = document.getElementById('filtrosActivos');
+    cont.innerHTML = '';
+    const etiquetasEspeciales = { '_TIPO_ORDEN_LABEL': 'Tipo Orden', '_REINCIDENCIA': 'Recurrencia', '_SUBFAMILIA_TRASERA': 'Subfamilia Trasera', '_SUBFAMILIA_LATERAL': 'Subfamilia Lateral' };
+    Object.entries(filtrosActivos).forEach(([k, v]) => { if (!v) return; const t = document.createElement('span'); t.className = 'filtro-tag'; const nombre = etiquetasEspeciales[k] || k.replace('_', ' '); t.textContent = `${nombre}: ${v} ✕`; t.onclick = () => { delete filtrosActivos[k]; pushHistorial(); renderTags(); aplicarFiltros(); }; cont.appendChild(t); });
+    Object.entries(exclusiones).forEach(([campo, set]) => { if (!set.size) return; const t = document.createElement('span'); t.className = 'filtro-tag filtro-excluido'; t.textContent = `Excluidos ${campo.replace('_', ' ')}: ${set.size} ✕`; t.title = [...set].join(', '); t.onclick = () => { exclusiones[campo] = new Set(); pushHistorial(); renderTags(); aplicarFiltros(); }; cont.appendChild(t); });
+    const buscarDesc = document.getElementById('buscarDescripcion').value.trim();
+    if (buscarDesc) { const t = document.createElement('span'); t.className = 'filtro-tag'; t.textContent = `🔍 Descripción: "${buscarDesc}" ✕`; t.onclick = () => { document.getElementById('buscarDescripcion').value = ''; aplicarFiltros(); renderTags(); }; cont.appendChild(t); }
+}
+
+function pushHistorial() { historial = historial.slice(0, historialIdx + 1); historial.push({ filtrosActivos: JSON.parse(JSON.stringify(filtrosActivos)), exclusiones: Object.fromEntries(Object.entries(exclusiones).map(([k, v]) => [k, [...v]])) }); historialIdx = historial.length - 1; actualizarBotones(); }
+function actualizarBotones() { document.getElementById('btnAtras').disabled = historialIdx <= 0; document.getElementById('btnAdelante').disabled = historialIdx >= historial.length - 1; }
+document.getElementById('btnAtras').addEventListener('click', () => { if (historialIdx > 0) { historialIdx--; const estado = historial[historialIdx]; filtrosActivos = JSON.parse(JSON.stringify(estado.filtrosActivos)); exclusiones = {}; for (const k in estado.exclusiones) exclusiones[k] = new Set(estado.exclusiones[k]); renderTags(); aplicarFiltros(); actualizarBotones(); } });
+document.getElementById('btnAdelante').addEventListener('click', () => { if (historialIdx < historial.length - 1) { historialIdx++; const estado = historial[historialIdx]; filtrosActivos = JSON.parse(JSON.stringify(estado.filtrosActivos)); exclusiones = {}; for (const k in estado.exclusiones) exclusiones[k] = new Set(estado.exclusiones[k]); renderTags(); aplicarFiltros(); actualizarBotones(); } });
+
+document.getElementById('btnLimpiar').addEventListener('click', () => { filtrosActivos = {}; exclusiones = {}; document.getElementById('buscarDescripcion').value = ''; pushHistorial(); renderTags(); aplicarFiltros(); calcularRangoFechas(datosOriginales); toast('✕ Todos los filtros limpiados', 'info'); });
+document.getElementById('fechaInicio').addEventListener('change', () => { pushHistorial(); aplicarFiltros(); renderTags(); });
+document.getElementById('fechaFin').addEventListener('change', () => { pushHistorial(); aplicarFiltros(); renderTags(); });
+let timeoutBusqueda;
+document.getElementById('buscarDescripcion').addEventListener('input', function() { clearTimeout(timeoutBusqueda); timeoutBusqueda = setTimeout(() => { aplicarFiltros(); renderTags(); }, 300); });
+document.getElementById('btnRecargar').addEventListener('click', cargarDatos);
+
+const btnColumnas = document.getElementById('btnColumnas');
+const colMenu = document.getElementById('colMenu');
+btnColumnas.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (colMenu.style.display === 'block') { colMenu.style.display = 'none'; return; }
+    colMenu.innerHTML = '';
+    tablaDT.columns().every(function(i) {
+        const title = this.header().textContent.trim();
+        const visible = this.visible();
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" ${visible ? 'checked' : ''} data-col="${i}"> ${title}`;
+        label.querySelector('input').addEventListener('change', function() { tablaDT.column(this.dataset.col).visible(this.checked); });
+        colMenu.appendChild(label);
+    });
+    const rect = btnColumnas.getBoundingClientRect();
+    colMenu.style.top = (rect.bottom + 8) + 'px';
+    colMenu.style.left = rect.left + 'px';
+    colMenu.style.display = 'block';
+});
+document.addEventListener('click', (e) => { if (!colMenu.contains(e.target) && e.target !== btnColumnas) colMenu.style.display = 'none'; });
+
+document.getElementById('toggleModo').addEventListener('click', () => { modoOscuro = !modoOscuro; document.body.classList.toggle('light-mode', !modoOscuro); document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro'; localStorage.setItem('ct_modo', modoOscuro ? 'dark' : 'light'); });
+document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : ' Modo oscuro';
+
+pushHistorial();
+cargarDatos();
+</script>
+</body>
+</html>

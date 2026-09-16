@@ -23,6 +23,7 @@
   .btn-filtro { display: inline-flex; align-items: center; gap: 6px; background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border); padding: 7px 14px; border-radius: 8px; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
   .btn-filtro:hover { background: var(--btn-hover); color: var(--btn-hover-text); border-color: var(--btn-hover); transform: translateY(-1px); }
   .btn-filtro.activo { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .sep-filtros { width: 1px; height: 28px; background: var(--border); margin: 0 4px; }
   
   .kpi-container { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
   .kpi { background: var(--kpi-bg); border: 1px solid var(--kpi-border); border-radius: 12px; color: var(--text); padding: 20px 24px; flex: 1; min-width: 200px; text-align: left; box-shadow: var(--shadow); }
@@ -46,19 +47,15 @@
   .filtro-tag:hover { opacity: 0.8; }
   .filtro-tag.filtro-excluido { background: var(--accent4) !important; color: #ffffff !important; }
   
-  /* Menú desplegable con checkboxes */
-  .excl-menu { position: fixed; z-index: 9999; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); width: 300px; padding: 16px; font-size: 12px; max-height: 80vh; display: flex; flex-direction: column; }
+  /* Menú de exclusión (dropdown con checkboxes) */
+  .excl-menu { position: fixed; z-index: 9999; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); width: 280px; padding: 16px; font-size: 12px; }
   .excl-title { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-  .excl-barra { display: flex; gap: 8px; margin-bottom: 8px; }
-  .excl-barra button { flex: 1; font-size: 11px; padding: 6px 0; background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
-  .excl-barra button:hover { background: var(--accent); color: var(--bg); }
-  .excl-buscador { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); margin-bottom: 8px; font-size: 12px; box-sizing: border-box; }
-  .excl-buscador:focus { outline: none; border-color: var(--accent); }
-  .excl-lista { flex: 1; overflow-y: auto; margin-bottom: 12px; max-height: 300px; }
+  .excl-barra { display: flex; gap: 8px; margin-bottom: 12px; }
+  .excl-barra button { flex: 1; font-size: 11px; padding: 6px 0; }
+  .excl-lista { max-height: 250px; overflow-y: auto; margin-bottom: 12px; }
   .excl-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; border-radius: 6px; color: var(--text); transition: background 0.2s; }
   .excl-row:hover { background: var(--bg3); }
   .excl-row input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
-  .excl-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
   .excl-aplicar { width: 100%; background: var(--accent); color: var(--bg); font-weight: 600; border: none; padding: 10px; border-radius: 8px; cursor: pointer; transition: opacity 0.2s; }
   .excl-aplicar:hover { opacity: 0.85; }
   
@@ -75,15 +72,12 @@
   .col-menu { position: absolute; z-index: 9999; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; box-shadow: var(--shadow-lg); min-width: 200px; display: none; }
   .col-menu label { display: flex; align-items: center; gap: 8px; padding: 6px 0; color: var(--text); font-size: 12px; cursor: pointer; }
   .col-menu input { accent-color: var(--accent); }
-  
-  .rango-info { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-  .rango-info strong { color: var(--text); }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <span class="header-logo">⚠️ Averías Reiteradas - Parque Central - UCT</span>
+  <span class="header-logo">️ Averías Reiteradas - Parque Central - UCT</span>
   <a href="index.html" class="btn-nav">← Dashboard</a>
   <a href="incidencias.html" class="btn-nav">📋 Incidencias</a>
   <button id="btnModo" class="btn-nav" style="margin-left:auto;">☀ Modo claro</button>
@@ -94,20 +88,19 @@
     <strong>Criterio de reiteración:</strong> se consideran <em>averías reiterativas</em> aquellas combinaciones de 
     <strong>Vehículo (VHLO) + Deficiencia Detectada</strong> que aparecen <strong>3 o más veces</strong> 
     dentro del periodo seleccionado.
-    <br><small style="color:var(--text-muted);">📊 Leyendo datos de: <strong>incidencias_aux</strong></small>
   </div>
 
   <!-- Controles de fecha -->
   <div class="controls">
-    <label>📅 Desde: <input type="date" id="fechaInicio"></label>
+    <label> Desde: <input type="date" id="fechaInicio"></label>
     <label>📅 Hasta: <input type="date" id="fechaFin"></label>
     <button id="btnLimpiarFechas" class="btn-nav">✕ Limpiar fechas</button>
-    <button id="btnLimpiarFiltros" class="btn-nav">🧹 Limpiar filtros</button>
+    <button id="btnLimpiarFiltros" class="btn-nav"> Limpiar filtros</button>
     <button id="btnColumnas" class="btn-nav" style="position:relative;">👁 Columnas</button>
     <button id="btnExportar" class="btn-nav">📥 Exportar CSV</button>
   </div>
 
-  <!-- ✅ Panel de filtros por categoría -->
+  <!-- ✅ NUEVO: Panel de filtros por categoría -->
   <div class="panel-filtros">
     <div class="filtros-grid">
       <button class="btn-filtro" data-campo="vhlo">🚛 VHLO</button>
@@ -120,11 +113,6 @@
   <!-- Tags de filtros activos -->
   <div id="filtrosActivos" class="filtros-activos"></div>
 
-  <div class="rango-info" id="rangoInfo">
-    <span>📅 Rango: <strong id="rangoTexto">Cargando...</strong></span>
-    <span>📊 Total registros en BD: <strong id="totalBD">-</strong> · Mostrando: <strong id="totalFiltrados">-</strong></span>
-  </div>
-
   <div class="kpi-container">
     <div class="kpi">Combinaciones reiterativas<span id="kpiCombinaciones">0</span></div>
     <div class="kpi">Total de avisos reiterativos<span id="kpiTotalAvisos">0</span></div>
@@ -133,7 +121,7 @@
   </div>
 
   <div class="leyenda-colores">
-    <strong>🎨 Frecuencia:</strong>
+    <strong> Frecuencia:</strong>
     <div class="leyenda-item"><div class="leyenda-dot" style="background:#10b981;"></div><span>Baja (3-5)</span></div>
     <div class="leyenda-item"><div class="leyenda-dot" style="background:#f59e0b;"></div><span>Media (6-10)</span></div>
     <div class="leyenda-item"><div class="leyenda-dot" style="background:#ef4444;"></div><span>Alta (11-20)</span></div>
@@ -190,9 +178,7 @@ let datosFiltrados = [];
 let datosReiterativas = [];
 let tablaReiteradas;
 let tablaDetalle;
-
-// ✅ Filtros por columna: { campo: Set([valores seleccionados]) }
-let filtrosColumna = {};
+let exclusiones = {}; // { campo: Set([valores a EXCLUIR]) }
 
 if (!modoOscuro) document.body.classList.add('light-mode');
 
@@ -237,12 +223,11 @@ function formatearFecha(date) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ✅ CARGAR DATOS DESDE incidencias_aux (con paginación)
+// CARGAR DATOS DESDE SUPABASE (con paginación)
 // ═══════════════════════════════════════════════════════════════
 async function cargarDatos() {
   try {
     document.getElementById('kpiCombinaciones').textContent = '...';
-    document.getElementById('totalBD').textContent = 'Cargando...';
     
     let todosLosDatos = [];
     let desde = 0;
@@ -250,7 +235,7 @@ async function cargarDatos() {
     
     while (true) {
       const { data, error } = await supabaseClient
-        .from('incidencias_aux')  // ✅ CAMBIADO: lee de incidencias_aux
+        .from('incidencias')
         .select('*')
         .range(desde, desde + limite - 1)
         .order('fecha_aviso', { ascending: true });
@@ -262,8 +247,6 @@ async function cargarDatos() {
       if (data.length < limite) break;
       desde += limite;
     }
-    
-    document.getElementById('totalBD').textContent = todosLosDatos.length.toLocaleString('es-ES');
     
     datosOriginales = todosLosDatos.map(d => {
       const fechaJS = parseFecha(d.fecha_aviso);
@@ -289,7 +272,6 @@ async function cargarDatos() {
       const maxFecha = new Date(Math.max(...datosOriginales.map(d => d.fechaJS)));
       document.getElementById('fechaInicio').valueAsDate = minFecha;
       document.getElementById('fechaFin').valueAsDate = maxFecha;
-      actualizarRangoInfo(minFecha, maxFecha);
     }
     
     if (!tablaReiteradas) inicializarTabla();
@@ -297,27 +279,16 @@ async function cargarDatos() {
     
   } catch (error) {
     console.error('Error al cargar datos:', error);
-    alert('Error al cargar datos desde incidencias_aux: ' + error.message);
+    alert('Error al cargar datos desde Supabase: ' + error.message);
   }
 }
 
-function actualizarRangoInfo(minFecha, maxFecha) {
-  const rangoTexto = document.getElementById('rangoTexto');
-  if (minFecha && maxFecha) {
-    rangoTexto.textContent = `${formatearFecha(minFecha)} → ${formatearFecha(maxFecha)}`;
-  } else {
-    rangoTexto.textContent = 'Sin filtro';
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// APLICAR FILTROS (fechas + columnas)
+// ══════════════════════════════════════════════════════════════
+// APLICAR FILTROS (fechas + exclusiones por categoría)
 // ═══════════════════════════════════════════════════════════════
 function aplicarFiltros() {
   const fi = document.getElementById('fechaInicio').valueAsDate;
   const ff = document.getElementById('fechaFin').valueAsDate;
-  
-  actualizarRangoInfo(fi, ff);
   
   let datos = datosOriginales.filter(d => {
     if (!d.fechaJS || isNaN(d.fechaJS)) return false;
@@ -328,25 +299,17 @@ function aplicarFiltros() {
     return dDate >= fiDate && dDate <= ffDate;
   });
   
-  // ✅ Aplicar filtros por columna (selección múltiple)
-  for (const campo in filtrosColumna) {
-    const set = filtrosColumna[campo];
-    if (set && set.size > 0) {
-      datos = datos.filter(d => {
-        const valor = (d[campo] || '').toString().trim().toUpperCase();
-        for (const val of set) {
-          if (valor === val.toUpperCase()) return true;
-        }
-        return false;
-      });
+  // Aplicar exclusiones por categoría
+  for (const campo in exclusiones) {
+    if (exclusiones[campo].size) {
+      datos = datos.filter(d => !exclusiones[campo].has((d[campo] || '').toString().trim().toUpperCase()));
     }
   }
   
   datosFiltrados = datos;
-  document.getElementById('totalFiltrados').textContent = datos.length.toLocaleString('es-ES');
-  
   procesarReiterativas(datos);
   renderTags();
+  actualizarBotonesFiltro();
 }
 
 function procesarReiterativas(datos) {
@@ -481,7 +444,7 @@ function inicializarTabla(filas) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ✅ FILTROS DESPLEGABLES POR CATEGORÍA (panel superior)
+// ✅ FILTROS POR CATEGORÍA (igual que incidencias.html)
 // ═══════════════════════════════════════════════════════════════
 document.querySelectorAll('.btn-filtro[data-campo]').forEach(btn => {
   btn.addEventListener('click', function(e) {
@@ -495,15 +458,10 @@ function abrirMenuFiltro(campo, anchorEl) {
   cerrarMenus();
   
   // Obtener valores únicos de ese campo
-  const valoresMap = {};
-  datosOriginales.forEach(d => {
-    const val = (d[campo] || '').toString().trim();
-    if (val !== '') {
-      const valUpper = val.toUpperCase();
-      if (!valoresMap[valUpper]) valoresMap[valUpper] = val;
-    }
-  });
-  const valores = Object.values(valoresMap).sort();
+  const valores = [...new Set(
+    datosOriginales.map(d => (d[campo] || '').toString().trim().toUpperCase())
+      .filter(v => v && v !== '' && v !== '****')
+  )].sort();
   
   const menu = document.createElement('div');
   menu.id = 'menuExcl';
@@ -511,42 +469,24 @@ function abrirMenuFiltro(campo, anchorEl) {
   
   const tit = document.createElement('div');
   tit.className = 'excl-title';
-  tit.textContent = 'Filtrar por: ' + campo.replace('_', ' ').toUpperCase();
+  tit.textContent = 'Filtrar: ' + campo.replace('_', ' ');
   menu.appendChild(tit);
   
-  // Barra de botones Todo/Ninguno
   const bar = document.createElement('div');
   bar.className = 'excl-barra';
   const bT = document.createElement('button');
   bT.textContent = '✓ Todo';
-  bT.onclick = () => menu.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+  bT.onclick = () => menu.querySelectorAll('input').forEach(c => c.checked = true);
   const bN = document.createElement('button');
   bN.textContent = '✗ Ninguno';
-  bN.onclick = () => menu.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+  bN.onclick = () => menu.querySelectorAll('input').forEach(c => c.checked = false);
   bar.appendChild(bT);
   bar.appendChild(bN);
   menu.appendChild(bar);
   
-  // ✅ Buscador
-  const buscador = document.createElement('input');
-  buscador.type = 'text';
-  buscador.className = 'excl-buscador';
-  buscador.placeholder = '🔍 Buscar...';
-  buscador.onclick = (e) => e.stopPropagation();
-  buscador.onkeyup = (e) => {
-    e.stopPropagation();
-    const q = buscador.value.toLowerCase();
-    menu.querySelectorAll('.excl-row').forEach(row => {
-      const text = row.querySelector('span').textContent.toLowerCase();
-      row.style.display = text.includes(q) ? 'flex' : 'none';
-    });
-  };
-  menu.appendChild(buscador);
-  
-  // Lista de checkboxes
   const lista = document.createElement('div');
   lista.className = 'excl-lista';
-  const seleccionados = filtrosColumna[campo] || new Set();
+  const excAct = exclusiones[campo] || new Set();
   
   valores.forEach(val => {
     const row = document.createElement('label');
@@ -554,11 +494,9 @@ function abrirMenuFiltro(campo, anchorEl) {
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.value = val;
-    cb.checked = seleccionados.size === 0 || seleccionados.has(val.toUpperCase());
-    cb.onclick = (e) => e.stopPropagation();
+    cb.checked = !excAct.has(val);
     const sp = document.createElement('span');
     sp.textContent = val;
-    sp.title = val;
     row.appendChild(cb);
     row.appendChild(sp);
     lista.appendChild(row);
@@ -566,26 +504,15 @@ function abrirMenuFiltro(campo, anchorEl) {
   
   menu.appendChild(lista);
   
-  // Botón Aplicar
   const btn = document.createElement('button');
   btn.className = 'excl-aplicar';
-  btn.textContent = 'Aplicar filtro';
-  btn.onclick = (e) => {
-    e.stopPropagation();
-    const nuevos = new Set();
-    menu.querySelectorAll('input[type=checkbox]:checked').forEach(cb => {
-      nuevos.add(cb.value.toUpperCase());
+  btn.textContent = 'Aplicar';
+  btn.onclick = () => {
+    const ex = new Set();
+    menu.querySelectorAll('input').forEach(cb => {
+      if (!cb.checked) ex.add(cb.value);
     });
-    filtrosColumna[campo] = nuevos;
-    
-    // Actualizar estado del botón
-    if (nuevos.size === 0 || nuevos.size === valores.length) {
-      delete filtrosColumna[campo];
-      $(anchorEl).removeClass('activo');
-    } else {
-      $(anchorEl).addClass('activo');
-    }
-    
+    exclusiones[campo] = ex;
     aplicarFiltros();
     cerrarMenus();
   };
@@ -593,10 +520,10 @@ function abrirMenuFiltro(campo, anchorEl) {
   
   document.body.appendChild(menu);
   
-  // Posicionar
   const r = anchorEl.getBoundingClientRect();
   requestAnimationFrame(() => {
-    const mW = menu.offsetWidth, mH = menu.offsetHeight;
+    const mW = menu.offsetWidth;
+    const mH = menu.offsetHeight;
     const top = (r.bottom + 4 + mH > window.innerHeight) ? Math.max(4, r.top - mH - 4) : r.bottom + 4;
     const left = (r.left + mW > window.innerWidth) ? Math.max(4, window.innerWidth - mW - 8) : r.left;
     menu.style.top = top + 'px';
@@ -617,6 +544,17 @@ function cerrarAlFuera(e) {
   document.removeEventListener('click', cerrarAlFuera);
 }
 
+function actualizarBotonesFiltro() {
+  document.querySelectorAll('.btn-filtro[data-campo]').forEach(btn => {
+    const campo = btn.dataset.campo;
+    if (exclusiones[campo] && exclusiones[campo].size > 0) {
+      btn.classList.add('activo');
+    } else {
+      btn.classList.remove('activo');
+    }
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // TAGS DE FILTROS ACTIVOS
 // ═══════════════════════════════════════════════════════════════
@@ -625,24 +563,22 @@ function renderTags() {
   cont.innerHTML = '';
   
   const nombresCampo = {
-    'vhlo': '🚛 VHLO',
-    'deficiencias': '🔧 Deficiencia',
-    'familia': '🚚 Familia Veh.',
-    'familia_averia': '🔩 Familia Avería'
+    'vhlo': 'VHLO',
+    'deficiencias': 'Deficiencia',
+    'familia': 'Familia Veh.',
+    'familia_averia': 'Familia Avería'
   };
   
-  for (const campo in filtrosColumna) {
-    const set = filtrosColumna[campo];
-    if (!set || set.size === 0) continue;
-    
+  for (const campo in exclusiones) {
+    const set = exclusiones[campo];
+    if (!set.size) continue;
     const nombre = nombresCampo[campo] || campo;
     const t = document.createElement('span');
-    t.className = 'filtro-tag';
-    t.textContent = `${nombre}: ${set.size} seleccionados ✕`;
+    t.className = 'filtro-tag filtro-excluido';
+    t.textContent = `${nombre}: ${set.size} excluidos ✕`;
     t.title = [...set].join(', ');
     t.onclick = () => {
-      delete filtrosColumna[campo];
-      $(`.btn-filtro[data-campo="${campo}"]`).removeClass('activo');
+      exclusiones[campo] = new Set();
       aplicarFiltros();
     };
     cont.appendChild(t);
@@ -723,11 +659,7 @@ document.getElementById('btnLimpiarFechas').addEventListener('click', () => {
 });
 
 document.getElementById('btnLimpiarFiltros').addEventListener('click', () => {
-  filtrosColumna = {};
-  $('.btn-filtro').removeClass('activo');
-  if (tablaReiteradas) {
-    tablaReiteradas.search('').columns().search('').draw();
-  }
+  exclusiones = {};
   aplicarFiltros();
 });
 

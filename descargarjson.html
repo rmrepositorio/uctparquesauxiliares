@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Descargar JSON — Control Tráfico</title>
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+  .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.9em; margin-bottom: 14px; }
+  .back-link:hover { opacity: 0.7; }
+  
+  .panel { background: var(--chart-bg); border: 1px solid var(--chart-border); border-radius: 12px; padding: 32px; margin-bottom: 20px; box-shadow: var(--shadow); text-align: center; }
+  .panel h1 { font-size: 1.8em; margin-bottom: 8px; color: var(--accent); }
+  .panel .subtitle { color: var(--text-muted); font-size: 0.95em; margin-bottom: 32px; }
+  
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+  .stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .stat-label { font-size: 0.75em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'Inter', sans-serif; font-weight: 500; }
+  .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 2.2em; font-weight: 700; color: var(--accent); }
+  .stat-value.ok { color: var(--accent7); }
+  .stat-value.warn { color: var(--accent2); }
+  
+  .format-selector { display: flex; gap: 12px; margin: 24px 0; justify-content: center; flex-wrap: wrap; }
+  .format-opt { background: var(--bg3); border: 2px solid var(--border); border-radius: 10px; padding: 16px 20px; cursor: pointer; transition: all 0.2s; min-width: 200px; text-align: left; }
+  .format-opt:hover { border-color: var(--accent5); }
+  .format-opt.selected { border-color: var(--accent); background: rgba(20, 184, 166, 0.1); }
+  .format-opt-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1em; margin-bottom: 4px; color: var(--text); }
+  .format-opt-desc { font-size: 0.8em; color: var(--text-muted); }
+  
+  .btn-download { background: var(--accent); color: var(--bg); border: none; padding: 16px 40px; border-radius: 10px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.2s; margin: 20px 0; font-family: 'Inter', sans-serif; }
+  .btn-download:hover { opacity: 0.85; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3); }
+  .btn-download:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  
+  .progress-bar { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; margin: 20px 0; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 5px; transition: width 0.3s; width: 0%; }
+  
+  .log { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 0.8em; max-height: 200px; overflow-y: auto; color: var(--text-muted); text-align: left; margin-top: 16px; }
+  .log-line { margin-bottom: 4px; }
+  .log-line.ok { color: var(--accent); }
+  .log-line.warn { color: var(--accent2); }
+  .log-line.err { color: var(--accent4); }
+  .log-line.info { color: var(--accent3); }
+  
+  .hidden { display: none !important; }
+  
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; border-radius: 10px; color: white; font-weight: 500; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 99999; animation: slideIn 0.3s ease-out; max-width: 400px; }
+  .toast.exito { background: #10b981; }
+  .toast.error { background: #ef4444; }
+  .toast.info { background: #3b82f6; }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  
+  .info-box { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 14px 18px; margin: 20px 0; font-size: 0.85em; color: var(--accent3); text-align: left; }
+  .info-box strong { color: var(--text); }
+  
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .format-selector { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">◀ Volver al Dashboard</a>
+
+<div class="header">
+  <h1>📤 Descargar JSON de la Base de Datos</h1>
+  <button id="btnModo" class="btn-nav">☀ Modo claro</button>
+</div>
+
+<div class="container">
+  
+  <div class="panel">
+    <h1>📥 Exportar datos a JSON</h1>
+    <p class="subtitle">Descarga todos los registros de Supabase en formato JSON</p>
+    
+    <div class="info-box">
+      💡 <strong>¿Qué hace esta página?</strong> Lee todos los registros de la tabla <strong id="tablaDestino">incidencias</strong> en Supabase y los descarga como archivo <code>resumen_full.json</code>, en el mismo formato que usabas originalmente.
+    </div>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Registros en BD</div>
+        <div class="stat-value" id="statTotal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Última actualización</div>
+        <div class="stat-value warn" id="statFecha" style="font-size:1.3em;">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tamaño estimado</div>
+        <div class="stat-value ok" id="statTamano">—</div>
+      </div>
+    </div>
+    
+    <h3 style="font-size:0.95em; margin:24px 0 12px; color:var(--text); text-align:left;"> Formato de salida</h3>
+    <div class="format-selector">
+      <div class="format-opt selected" id="fmtOriginal" onclick="selFormato('original')">
+        <div class="format-opt-title">📄 Formato Original</div>
+        <div class="format-opt-desc">Mismo formato que resumen_full.json (con espacios en claves)</div>
+      </div>
+      <div class="format-opt" id="fmtLimpio" onclick="selFormato('limpio')">
+        <div class="format-opt-title">✨ Formato Limpio</div>
+        <div class="format-opt-desc">Claves sin espacios ni caracteres especiales</div>
+      </div>
+    </div>
+    
+    <button class="btn-download" id="btnDescargar" onclick="descargarJSON()">
+      📥 Descargar JSON
+    </button>
+    
+    <div class="progress-bar hidden" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="log hidden" id="logBox"></div>
+  </div>
+
+</div>
+
+<script src="supabase-config.js"></script>
+
+<script>
+let modoOscuro = localStorage.getItem('ct_modo') !== 'light';
+let formatoSeleccionado = 'original';
+let totalRegistros = 0;
+
+if (!modoOscuro) document.body.classList.add('light-mode');
+
+// ═══════════════════════════════════════════════════════════════
+// MAPEO: Supabase (snake_case) → Formato Original JSON
+// ═══════════════════════════════════════════════════════════════
+const MAPEO_A_ORIGINAL = {
+  'familia': 'FAMILIA ',
+  'vhlo': 'VHLO ',
+  'conductor': 'CONDUCTOR ',
+  'familia_averia': 'FAMILIA AVERIA ',
+  'deficiencias': 'DEFICIENCIAS DETECTADAS ',
+  'descripcion_averia': 'DESCRIPCION AVERIA ',
+  'foto': 'FOTO ',
+  'fecha_aviso': 'FECHA AVISO ',
+  'hora': 'HORA ',
+  'turno': 'TURNO ',
+  'n_aviso': 'N  AVISO ',
+  'aviso_antiguo': 'AVISO ANTIGUO? ',
+  'origen_aviso': 'ORIGEN AVISO ',
+  'tipo_orden': 'TIPO ORDEN ',
+  'columna1': 'Columna1 ',
+  'columna2': 'Columna2 ',
+  'columna3': 'Columna3 ',
+  'columna4': 'Columna4 '
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAPEO: Supabase → Formato Limpio
+// ═══════════════════════════════════════════════════════════════
+const MAPEO_A_LIMPIO = {
+  'familia': 'FAMILIA',
+  'vhlo': 'VHLO',
+  'conductor': 'CONDUCTOR',
+  'familia_averia': 'FAMILIA_AVERIA',
+  'deficiencias': 'DEFICIENCIAS_DETECTADAS',
+  'descripcion_averia': 'DESCRIPCION_AVERIA',
+  'foto': 'FOTO',
+  'fecha_aviso': 'FECHA_AVISO',
+  'hora': 'HORA',
+  'turno': 'TURNO',
+  'n_aviso': 'N_AVISO',
+  'aviso_antiguo': 'AVISO_ANTIGUO',
+  'origen_aviso': 'ORIGEN_AVISO',
+  'tipo_orden': 'TIPO_ORDEN',
+  'columna1': 'COLUMNA1',
+  'columna2': 'COLUMNA2',
+  'columna3': 'COLUMNA3',
+  'columna4': 'COLUMNA4'
+};
+
+// ═══════════════════════════════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════════════════════════════
+function toast(texto, tipo = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast ${tipo}`;
+  t.textContent = texto;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+function log(msg, tipo = 'info') {
+  const logBox = document.getElementById('logBox');
+  logBox.classList.remove('hidden');
+  const linea = document.createElement('div');
+  linea.className = `log-line ${tipo}`;
+  linea.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logBox.appendChild(linea);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function selFormato(fmt) {
+  formatoSeleccionado = fmt;
+  document.getElementById('fmtOriginal').classList.toggle('selected', fmt === 'original');
+  document.getElementById('fmtLimpio').classList.toggle('selected', fmt === 'limpio');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ OBTENER TODOS LOS REGISTROS (con paginación, usa TABLA_PRINCIPAL)
+// ═══════════════════════════════════════════════════════════════
+async function obtenerTodosLosRegistros(onProgress) {
+  let todos = [];
+  let desde = 0;
+  const limite = 1000;
+  let total = null;
+  
+  while (true) {
+    const { data, error, count } = await supabaseClient
+      .from(TABLA_PRINCIPAL)  // ✅ Usa la variable
+      .select('*', { count: 'exact' })
+      .range(desde, desde + limite - 1)
+      .order('id', { ascending: true });
+    
+    if (error) throw error;
+    
+    if (total === null && count !== null) total = count;
+    if (!data || data.length === 0) break;
+    
+    todos = todos.concat(data);
+    
+    if (onProgress) {
+      onProgress(todos.length, total || todos.length);
+    }
+    
+    if (data.length < limite) break;
+    desde += limite;
+  }
+  
+  return { datos: todos, total: total || todos.length };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONVERTIR REGISTRO AL FORMATO SELECCIONADO
+// ═══════════════════════════════════════════════════════════════
+function convertirRegistro(registro, formato) {
+  const mapeo = formato === 'original' ? MAPEO_A_ORIGINAL : MAPEO_A_LIMPIO;
+  const resultado = {};
+  
+  for (const keySup in mapeo) {
+    const keyDestino = mapeo[keySup];
+    let valor = registro[keySup];
+    
+    // Manejar valores null/undefined
+    if (valor === null || valor === undefined) {
+      valor = formato === 'original' ? ' ' : '';
+    }
+    
+    // Asegurar que sea string en formato original
+    if (formato === 'original' && typeof valor !== 'number') {
+      valor = valor.toString();
+    }
+    
+    resultado[keyDestino] = valor;
+  }
+  
+  return resultado;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CARGAR ESTADÍSTICAS AL INICIAR (usa TABLA_PRINCIPAL)
+// ═══════════════════════════════════════════════════════════════
+async function cargarEstadisticas() {
+  try {
+    log(`🔍 Conectando con Supabase (tabla: ${TABLA_PRINCIPAL})...`, 'info');
+    
+    const { count, error } = await supabaseClient
+      .from(TABLA_PRINCIPAL)  // ✅ Usa la variable
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) throw error;
+    
+    totalRegistros = count || 0;
+    document.getElementById('statTotal').textContent = totalRegistros.toLocaleString('es-ES');
+    document.getElementById('statFecha').textContent = new Date().toLocaleTimeString('es-ES');
+    
+    // Estimación de tamaño (~300 bytes por registro en JSON)
+    const tamanoEstimado = (totalRegistros * 300) / (1024 * 1024);
+    document.getElementById('statTamano').textContent = tamanoEstimado < 1 
+      ? `${Math.round(totalRegistros * 300 / 1024)} KB`
+      : `${tamanoEstimado.toFixed(1)} MB`;
+    
+    log(`📊 ${totalRegistros} registros encontrados en la tabla ${TABLA_PRINCIPAL}`, 'ok');
+    
+  } catch (error) {
+    console.error('Error al cargar estadísticas:', error);
+    document.getElementById('statTotal').textContent = 'Error';
+    log(`❌ Error: ${error.message}`, 'err');
+    toast('❌ Error al conectar con Supabase', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ DESCARGAR JSON (usa TABLA_PRINCIPAL)
+// ══════════════════════════════════════════════════════════════
+async function descargarJSON() {
+  const btn = document.getElementById('btnDescargar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Obteniendo datos...';
+  
+  const progressBar = document.getElementById('progressBar');
+  const progressFill = document.getElementById('progressFill');
+  progressBar.classList.remove('hidden');
+  progressFill.style.width = '0%';
+  
+  try {
+    log(`📥 Descargando registros desde la tabla ${TABLA_PRINCIPAL}...`, 'info');
+    
+    // Obtener todos los registros con paginación
+    const { datos, total } = await obtenerTodosLosRegistros((actual, total) => {
+      const pct = Math.round((actual / total) * 100);
+      progressFill.style.width = pct + '%';
+      log(`📦 Descargados ${actual.toLocaleString()} / ${total.toLocaleString()} registros (${pct}%)`, 'info');
+    });
+    
+    log(`✅ ${datos.length} registros descargados`, 'ok');
+    log(`🔄 Convirtiendo al formato ${formatoSeleccionado === 'original' ? 'Original' : 'Limpio'}...`, 'info');
+    
+    // Convertir al formato seleccionado
+    const datosConvertidos = datos.map(d => convertirRegistro(d, formatoSeleccionado));
+    
+    log(`📝 Generando archivo JSON...`, 'info');
+    
+    // Generar JSON con indentación
+    const jsonStr = JSON.stringify(datosConvertidos, null, 1);
+    
+    // Crear blob y descargar
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    const fecha = new Date().toISOString().split('T')[0];
+    const hora = new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
+    const sufijo = formatoSeleccionado === 'original' ? '' : '_limpio';
+    a.download = `resumen_full${sufijo}_${fecha}_${hora}.json`;
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    const tamanoMB = (blob.size / (1024 * 1024)).toFixed(2);
+    log(`✅ ¡Descarga completada! (${tamanoMB} MB)`, 'ok');
+    log(` Archivo: ${a.download}`, 'ok');
+    log(`📋 Tabla origen: ${TABLA_PRINCIPAL}`, 'info');
+    
+    toast(`✅ ${datos.length} registros descargados`, 'exito');
+    
+    btn.textContent = '✅ Descarga completada';
+    progressFill.style.width = '100%';
+    
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = '📥 Descargar JSON';
+    }, 3000);
+    
+  } catch (error) {
+    console.error('Error al descargar:', error);
+    log(`❌ ERROR: ${error.message}`, 'err');
+    toast(' Error al descargar: ' + error.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '📥 Descargar JSON';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODO CLARO/OSCURO
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('btnModo').addEventListener('click', () => {
+  modoOscuro = !modoOscuro;
+  document.body.classList.toggle('light-mode', !modoOscuro);
+  document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+  localStorage.setItem('ct_modo', modoOscuro ? 'dark' : 'light');
+});
+document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+
+// ═══════════════════════════════════════════════════════════════
+// INICIALIZACIÓN
+// ═══════════════════════════════════════════════════════════════
+
+// Mostrar nombre de tabla en el info-box
+document.getElementById('tablaDestino').textContent = TABLA_PRINCIPAL;
+
+cargarEstadisticas();
+</script>
+
+</body>
+</html>

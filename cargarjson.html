@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargar JSON a Base de Datos — Control Tráfico</title>
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.9em; margin-bottom: 14px; }
+  .back-link:hover { opacity: 0.7; }
+  .steps { display: flex; gap: 0; margin-bottom: 32px; }
+  .step { flex: 1; padding: 14px 20px; background: var(--bg2); border: 1px solid var(--border); font-size: 0.85em; color: var(--text-muted); transition: all 0.3s; font-family: 'Inter', sans-serif; }
+  .step:first-child { border-radius: 8px 0 0 8px; }
+  .step:last-child { border-radius: 0 8px 8px 0; }
+  .step.active { background: var(--bg3); border-color: var(--accent); color: var(--text); font-weight: 600; }
+  .step.done { border-color: var(--accent); color: var(--accent); }
+  .step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--text-muted); font-weight: 700; margin-right: 8px; }
+  .step.active .step-num { background: var(--accent); color: var(--bg); }
+  .step.done .step-num { background: var(--accent); color: var(--bg); }
+  .step.done .step-num::before { content: '✓'; }
+  .step.done .step-num-inner { display: none; }
+  
+  .panel { background: var(--chart-bg); border: 1px solid var(--chart-border); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .panel h2 { font-size: 1.1em; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  
+  .drop-zone { background: var(--bg2); border: 2px dashed var(--border); border-radius: 12px; padding: 48px 32px; text-align: center; transition: all 0.3s; cursor: pointer; position: relative; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: var(--bg3); }
+  .drop-zone-icon { font-size: 3em; margin-bottom: 12px; display: block; }
+  .drop-zone-title { font-family: 'Inter', sans-serif; font-size: 1.3em; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .drop-zone-sub { color: var(--text-muted); font-size: 0.85em; margin-bottom: 16px; }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  
+  .info-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+  .info-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .info-card-label { font-size: 0.75em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-family: 'Inter', sans-serif; font-weight: 500; }
+  .info-card-val { font-family: 'Rajdhani', sans-serif; font-size: 1.8em; font-weight: 700; color: var(--accent); }
+  .info-card-val.warn { color: var(--accent2); }
+  .info-card-val.ok { color: var(--accent7); }
+  .info-card-val.err { color: var(--accent4); }
+  
+  .options { display: flex; gap: 16px; margin: 20px 0; flex-wrap: wrap; }
+  .opt { flex: 1; background: var(--bg3); border: 2px solid var(--border); border-radius: 10px; padding: 16px; cursor: pointer; transition: all 0.2s; min-width: 200px; }
+  .opt:hover { border-color: var(--accent5); }
+  .opt.selected { border-color: var(--accent); background: rgba(20, 184, 166, 0.1); }
+  .opt-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.05em; margin-bottom: 4px; color: var(--text); }
+  .opt-desc { font-size: 0.8em; color: var(--text-muted); }
+  
+  .preview-wrap { max-height: 400px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; margin: 16px 0; }
+  .preview-table { width: 100%; border-collapse: collapse; font-size: 0.78em; }
+  .preview-table th { background: var(--table-header); color: var(--text); padding: 8px 10px; text-align: left; position: sticky; top: 0; font-weight: 600; border-bottom: 2px solid var(--accent); white-space: nowrap; }
+  .preview-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--table-text); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preview-table tr:nth-child(even) td { background: var(--table-alt); }
+  
+  .alert { padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 0.85em; }
+  .alert-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: var(--accent3); }
+  .alert-warn { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: var(--accent2); }
+  .alert-success { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--accent7); }
+  .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--accent4); }
+  
+  .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 16px 0; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; width: 0%; }
+  
+  .log { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 0.78em; max-height: 300px; overflow-y: auto; color: var(--text-muted); }
+  .log-line { margin-bottom: 4px; }
+  .log-line.ok { color: var(--accent); }
+  .log-line.warn { color: var(--accent2); }
+  .log-line.err { color: var(--accent4); }
+  .log-line.info { color: var(--accent3); }
+  
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s; font-family: 'Inter', sans-serif; background: var(--btn-bg); color: var(--btn-text); }
+  .btn:hover { background: var(--btn-hover); color: var(--btn-hover-text); border-color: var(--btn-hover); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-success { background: var(--accent7); color: white; border-color: var(--accent7); }
+  .btn-success:hover { opacity: 0.85; }
+  .btn-group { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  
+  .hidden { display: none !important; }
+  
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; border-radius: 10px; color: white; font-weight: 500; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 99999; animation: slideIn 0.3s ease-out; max-width: 400px; }
+  .toast.exito { background: #10b981; }
+  .toast.error { background: #ef4444; }
+  .toast.info { background: #3b82f6; }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  
+  .warning-box { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--accent4); border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 0.85em; color: var(--accent4); }
+  .warning-box strong { font-weight: 700; }
+  
+  .debug-info { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 12px 0; font-size: 0.85em; color: var(--text-muted); line-height: 1.6; }
+  .debug-info strong { color: var(--text); }
+  
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+    .info-cards { grid-template-columns: 1fr 1fr; }
+    .options { flex-direction: column; }
+    .steps { flex-direction: column; }
+    .step { border-radius: 0 !important; }
+    .step:first-child { border-radius: 8px 8px 0 0 !important; }
+    .step:last-child { border-radius: 0 0 8px 8px !important; }
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">◀ Volver al Dashboard</a>
+
+<div class="header">
+  <h1> Cargar JSON a Base de Datos</h1>
+  <button id="btnModo" class="btn-nav">☀ Modo claro</button>
+</div>
+
+<div class="container">
+  
+  <div class="steps">
+    <div class="step active" id="step1"><span class="step-num"><span class="step-num-inner">1</span></span>Cargar JSON</div>
+    <div class="step" id="step2"><span class="step-num"><span class="step-num-inner">2</span></span>Revisar</div>
+    <div class="step" id="step3"><span class="step-num"><span class="step-num-inner">3</span></span>Importar</div>
+  </div>
+
+  <div id="panel1">
+    <div class="panel">
+      <h2>📄 Cargar archivo JSON</h2>
+      <p style="color:var(--text-muted); font-size:12px; margin-bottom:16px;">
+        Arrastra tu archivo <strong>resumen_full.json</strong> o haz clic para seleccionarlo.
+      </p>
+      <div class="drop-zone" id="dropZone">
+        <span class="drop-zone-icon">📂</span>
+        <div class="drop-zone-title">Arrastra tu JSON aquí</div>
+        <div class="drop-zone-sub">O haz clic para seleccionarlo · Formato: <strong>.json</strong></div>
+        <button class="btn btn-primary" style="position:relative; z-index:2; pointer-events:none;">Seleccionar archivo</button>
+        <input type="file" id="fileInput" accept=".json">
+      </div>
+      <div id="jsonInfo" style="margin-top:16px;"></div>
+      <div id="debugInfo" class="debug-info hidden"></div>
+    </div>
+  </div>
+
+  <div id="panel2" class="hidden">
+    <div class="panel">
+      <h2>👁️ Revisión de datos</h2>
+      
+      <div class="info-cards">
+        <div class="info-card">
+          <div class="info-card-label">Total en JSON</div>
+          <div class="info-card-val" id="statTotal">0</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Filas válidas</div>
+          <div class="info-card-val ok" id="statValidos">0</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Filas vacías</div>
+          <div class="info-card-val warn" id="statVacias">0</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">A importar</div>
+          <div class="info-card-val ok" id="statImportar">0</div>
+        </div>
+      </div>
+
+      <h3 style="font-size:13px; margin:20px 0 12px; color:var(--text);">Modo de importación</h3>
+      <div class="options">
+        <div class="opt selected" id="optFusionar" onclick="selOpt('fusionar')">
+          <div class="opt-title"> Fusionar</div>
+          <div class="opt-desc">Añade solo los registros nuevos (por Nº Aviso), sin duplicados</div>
+        </div>
+        <div class="opt" id="optReemplazar" onclick="selOpt('reemplazar')">
+          <div class="opt-title">🔄 Reemplazar</div>
+          <div class="opt-desc">Borra todos los datos existentes e inserta los del JSON</div>
+        </div>
+        <div class="opt" id="optForzar" onclick="selOpt('forzar')">
+          <div class="opt-title">⚡ Forzar todo</div>
+          <div class="opt-desc">Importa TODO sin verificar duplicados (más rápido)</div>
+        </div>
+      </div>
+
+      <h3 style="font-size:13px; margin:20px 0 12px; color:var(--text);">Vista previa (primeros 20 registros)</h3>
+      <div class="preview-wrap">
+        <table class="preview-table" id="tablaPreview">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn" onclick="goStep(1)">← Volver a cargar</button>
+        <button class="btn btn-primary" id="btnContinuar">Continuar →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel3" class="hidden">
+    <div class="panel">
+      <h2>🚀 Importando a Supabase</h2>
+      
+      <div id="warningReemplazar" class="warning-box hidden">
+        ⚠️ <strong>Modo Reemplazar:</strong> Se borrarán TODOS los registros actuales de la base de datos.
+      </div>
+
+      <div class="log" id="logBox"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+      <div class="btn-group">
+        <button class="btn btn-success" id="btnImportar" onclick="importarDatos()">🚀 Iniciar importación</button>
+        <button class="btn" onclick="goStep(2)">← Volver a revisar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel4" class="hidden">
+    <div class="panel" style="text-align:center; padding:40px;">
+      <div style="font-size:4em; margin-bottom:16px;">✅</div>
+      <h2 style="font-size:1.5em; margin-bottom:12px;">¡Importación completada!</h2>
+      <p id="resumenFinal" style="color:var(--text-muted); font-size:14px; margin-bottom:24px;"></p>
+      
+      <div class="btn-group" style="justify-content:center;">
+        <button class="btn btn-primary" onclick="window.location.href='index.html'">🏠 Ir al Dashboard</button>
+        <button class="btn btn-primary" onclick="window.location.href='incidencias.html'">📋 Ver Incidencias</button>
+        <button class="btn" onclick="reiniciar()">↺ Importar otro JSON</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="supabase-config.js"></script>
+
+<script>
+let datosJson = [];
+let datosValidos = [];
+let datosVacios = [];
+let datosAImportar = [];
+let modoSeleccionado = 'fusionar';
+let modoOscuro = localStorage.getItem('ct_modo') !== 'light';
+
+// Mapeo de claves del JSON a nombres canónicos
+const MAPEO_CLAVES = {
+  'FAMILIA': 'familia', 'VHLO': 'vhlo', 'CONDUCTOR': 'conductor',
+  'FAMILIA AVERIA': 'familia_averia', 'FAMILIA_AVERIA': 'familia_averia',
+  'DEFICIENCIAS DETECTADAS': 'deficiencias', 'DEFICIENCIAS': 'deficiencias',
+  'DESCRIPCION AVERIA': 'descripcion_averia', 'DESCRIPCION_AVERIA': 'descripcion_averia',
+  'FOTO': 'foto', 'FECHA AVISO': 'fecha_aviso', 'FECHA_AVISO': 'fecha_aviso',
+  'HORA': 'hora', 'TURNO': 'turno',
+  'N AVISO': 'n_aviso', 'N  AVISO': 'n_aviso',
+  'Nº AVISO': 'n_aviso',
+  'AVISO ANTIGUO': 'aviso_antiguo', 'AVISO ANTIGUO?': 'aviso_antiguo', 'AVISO_ANTIGUO': 'aviso_antiguo',
+  'ORIGEN AVISO': 'origen_aviso', 'ORIGEN_AVISO': 'origen_aviso',
+  'TIPO ORDEN': 'tipo_orden', 'TIPO_ORDEN': 'tipo_orden',
+  'COLUMNA1': 'columna1', 'COLUMNA2': 'columna2', 'COLUMNA3': 'columna3', 'COLUMNA4': 'columna4',
+  'COLUMN1': 'columna1', 'COLUMN2': 'columna2', 'COLUMN3': 'columna3', 'COLUMN4': 'columna4'
+};
+
+if (!modoOscuro) document.body.classList.add('light-mode');
+
+// ═══════════════════════════════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════════════════════════════
+function toast(texto, tipo = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast ${tipo}`;
+  t.textContent = texto;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+function log(msg, tipo = 'info') {
+  const logBox = document.getElementById('logBox');
+  const linea = document.createElement('div');
+  linea.className = `log-line ${tipo}`;
+  linea.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logBox.appendChild(linea);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function goStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('panel'+i).classList.toggle('hidden', i !== n);
+    const s = document.getElementById('step'+i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    else if (i === n) s.classList.add('active');
+  });
+}
+
+function normalizarClave(nombre) {
+  let n = nombre.toString().trim().toUpperCase().replace(/[¿?]/g, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  return MAPEO_CLAVES[n] || null;
+}
+
+function normalizarFila(fila) {
+  const resultado = {};
+  for (const key in fila) {
+    const keySup = normalizarClave(key);
+    if (keySup) {
+      let valor = fila[key];
+      if (typeof valor === 'string') valor = valor.trim();
+      if (valor === '' || valor === ' ') valor = null;
+      resultado[keySup] = valor;
+    }
+  }
+  return resultado;
+}
+
+function esFilaVacia(fila) {
+  return Object.values(fila).every(v => v === null || v === undefined);
+}
+
+function convertirASupabase(fila) {
+  const resultado = {};
+  for (const key in fila) {
+    if (fila[key] !== null && fila[key] !== undefined) {
+      resultado[key] = fila[key];
+    }
+  }
+  return resultado;
+}
+
+function getNAviso(fila) {
+  return (fila.n_aviso || '').toString().trim();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ OBTENER TODOS LOS N_AVISO DE SUPABASE (usa TABLA_PRINCIPAL)
+// ═══════════════════════════════════════════════════════════════
+async function obtenerTodosLosNAviso() {
+  let todos = [];
+  let desde = 0;
+  const limite = 1000;
+  
+  while (true) {
+    const { data, error } = await supabaseClient
+      .from(TABLA_PRINCIPAL)  // ✅ Usa la variable
+      .select('n_aviso')
+      .range(desde, desde + limite - 1);
+    
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    
+    todos = todos.concat(data.map(d => (d.n_aviso || '').toString().trim()).filter(v => v !== ''));
+    if (data.length < limite) break;
+    desde += limite;
+  }
+  
+  return todos;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CARGAR JSON
+// ═══════════════════════════════════════════════════════════════
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) cargarJSON(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) cargarJSON(e.target.files[0]);
+});
+
+function cargarJSON(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error('El JSON no es un array');
+      
+      log(`📊 JSON cargado: ${data.length} registros totales`, 'info');
+      
+      datosJson = data.map(fila => normalizarFila(fila));
+      
+      datosVacios = [];
+      datosValidos = [];
+      
+      datosJson.forEach((fila, idx) => {
+        if (esFilaVacia(fila)) {
+          datosVacios.push({ idx });
+        } else {
+          datosValidos.push(fila);
+        }
+      });
+      
+      const debugInfo = document.getElementById('debugInfo');
+      debugInfo.classList.remove('hidden');
+      debugInfo.innerHTML = `
+        <strong>📊 Análisis del JSON:</strong><br>
+        • Total de filas: <strong>${datosJson.length.toLocaleString()}</strong><br>
+        • Filas válidas: <strong>${datosValidos.length.toLocaleString()}</strong><br>
+        • Filas vacías: <strong>${datosVacios.length.toLocaleString()}</strong><br>
+        • Tabla destino: <strong>${TABLA_PRINCIPAL}</strong>
+      `;
+      
+      dropZone.style.borderColor = 'var(--accent)';
+      dropZone.querySelector('.drop-zone-title').textContent = `✅ ${file.name}`;
+      dropZone.querySelector('.drop-zone-sub').textContent = `${datosJson.length} filas · ${datosValidos.length} válidas`;
+      
+      document.getElementById('jsonInfo').innerHTML = 
+        `<div class="alert alert-success">✅ JSON cargado correctamente</div>`;
+      
+      document.getElementById('statTotal').textContent = datosJson.length.toLocaleString();
+      document.getElementById('statValidos').textContent = datosValidos.length.toLocaleString();
+      document.getElementById('statVacias').textContent = datosVacios.length.toLocaleString();
+      document.getElementById('statImportar').textContent = datosValidos.length.toLocaleString();
+      
+      mostrarPreview(datosValidos.slice(0, 20));
+      goStep(2);
+      toast(`✅ ${datosValidos.length} registros válidos cargados`, 'exito');
+      
+    } catch (err) {
+      document.getElementById('jsonInfo').innerHTML = 
+        `<div class="alert alert-error">❌ Error al cargar JSON: ${err.message}</div>`;
+      toast('❌ Error al cargar JSON', 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function selOpt(modo) {
+  modoSeleccionado = modo;
+  document.getElementById('optFusionar').classList.toggle('selected', modo === 'fusionar');
+  document.getElementById('optReemplazar').classList.toggle('selected', modo === 'reemplazar');
+  document.getElementById('optForzar').classList.toggle('selected', modo === 'forzar');
+}
+
+document.getElementById('btnContinuar').addEventListener('click', () => {
+  if (modoSeleccionado === 'reemplazar') {
+    document.getElementById('warningReemplazar').classList.remove('hidden');
+  } else {
+    document.getElementById('warningReemplazar').classList.add('hidden');
+  }
+  goStep(3);
+});
+
+function mostrarPreview(filas) {
+  const thead = document.querySelector('#tablaPreview thead');
+  const tbody = document.querySelector('#tablaPreview tbody');
+  const columnas = ['vhlo', 'familia_averia', 'deficiencias', 'descripcion_averia', 'fecha_aviso', 'n_aviso'];
+  const titulos = ['VHLO', 'Familia Avería', 'Deficiencias', 'Descripción', 'Fecha', 'Nº Aviso'];
+  thead.innerHTML = '<tr>' + titulos.map(t => `<th>${t}</th>`).join('') + '</tr>';
+  tbody.innerHTML = filas.map(f => 
+    '<tr>' + columnas.map(c => `<td>${f[c] !== undefined && f[c] !== null ? f[c] : ''}</td>`).join('') + '</tr>'
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ IMPORTAR A SUPABASE (usa TABLA_PRINCIPAL)
+// ═══════════════════════════════════════════════════════════════
+async function importarDatos() {
+  const btn = document.getElementById('btnImportar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Importando...';
+  
+  const progressFill = document.getElementById('progressFill');
+  progressFill.style.width = '0%';
+  
+  try {
+    if (modoSeleccionado === 'fusionar') {
+      log('🔍 Obteniendo TODOS los Nº Aviso existentes en Supabase...', 'info');
+      const avisosExistentes = await obtenerTodosLosNAviso();
+      const setExistentes = new Set(avisosExistentes);
+      
+      log(`📊 Encontrados ${setExistentes.size} Nº Aviso únicos en la base de datos`, 'info');
+      
+      datosAImportar = datosValidos.filter(fila => {
+        const nav = getNAviso(fila);
+        if (nav === '') return true;
+        return !setExistentes.has(nav);
+      });
+      
+      const duplicados = datosValidos.length - datosAImportar.length;
+      log(`✅ ${datosAImportar.length} registros nuevos a importar`, 'ok');
+      if (duplicados > 0) log(`⚠️ ${duplicados} duplicados ignorados`, 'warn');
+      
+    } else if (modoSeleccionado === 'forzar') {
+      log('⚡ Modo FORZAR: importando TODO sin verificar duplicados...', 'warn');
+      datosAImportar = [...datosValidos];
+      log(` ${datosAImportar.length} registros listos para importar`, 'info');
+      
+    } else {
+      log('⚠️ Modo REEMPLAZAR: borrando todos los datos existentes...', 'warn');
+      const { error } = await supabaseClient
+        .from(TABLA_PRINCIPAL)  // ✅ Usa la variable
+        .delete()
+        .neq('id', 0);
+      if (error) throw error;
+      log('✅ Base de datos vaciada', 'ok');
+      datosAImportar = [...datosValidos];
+    }
+    
+    if (datosAImportar.length === 0) {
+      log('️ No hay registros nuevos para importar', 'warn');
+      toast('⚠️ No hay registros nuevos', 'error');
+      btn.disabled = false;
+      btn.textContent = '🚀 Iniciar importación';
+      return;
+    }
+    
+    const datosConvertidos = datosAImportar.map(convertirASupabase);
+    log(`📦 Preparando ${datosConvertidos.length} registros para insertar...`, 'info');
+    
+    const LOTE = 100;
+    let insertados = 0;
+    let errores = 0;
+    const totalLotes = Math.ceil(datosConvertidos.length / LOTE);
+    
+    for (let i = 0; i < datosConvertidos.length; i += LOTE) {
+      const lote = datosConvertidos.slice(i, i + LOTE);
+      const numLote = Math.floor(i / LOTE) + 1;
+      
+      log(`📤 Insertando lote ${numLote}/${totalLotes} (${lote.length} registros)...`, 'info');
+      
+      try {
+        const { error } = await supabaseClient
+          .from(TABLA_PRINCIPAL)  // ✅ Usa la variable
+          .insert(lote);
+        if (error) {
+          log(`❌ Error en lote ${numLote}: ${error.message}`, 'err');
+          errores += lote.length;
+        } else {
+          insertados += lote.length;
+          log(`✅ Lote ${numLote} completado`, 'ok');
+        }
+      } catch (err) {
+        log(`❌ Error en lote ${numLote}: ${err.message}`, 'err');
+        errores += lote.length;
+      }
+      
+      const pct = Math.round(((i + lote.length) / datosConvertidos.length) * 100);
+      progressFill.style.width = pct + '%';
+    }
+    
+    log(`🎉 ¡IMPORTACIÓN COMPLETADA!`, 'ok');
+    log(`✅ Insertados: ${insertados}`, 'ok');
+    if (errores > 0) log(`❌ Errores: ${errores}`, 'err');
+    
+    toast(`✅ ${insertados} registros importados a Supabase`, 'exito');
+    
+    document.getElementById('resumenFinal').innerHTML = 
+      `Se han importado <strong>${insertados}</strong> registros a la base de datos.<br>
+       Modo: <strong>${modoSeleccionado === 'fusionar' ? 'Fusionar' : modoSeleccionado === 'forzar' ? 'Forzar todo' : 'Reemplazar'}</strong><br>
+       Tabla: <strong>${TABLA_PRINCIPAL}</strong><br>
+       ${errores > 0 ? `<span style="color:var(--accent4);">${errores} registros tuvieron errores</span><br>` : ''}
+       Los datos ya están disponibles en el Dashboard y en Incidencias.`;
+    
+    setTimeout(() => goStep(4), 1000);
+    
+  } catch (error) {
+    console.error('Error al importar:', error);
+    log(`❌ ERROR: ${error.message}`, 'err');
+    toast(' Error al importar: ' + error.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '🚀 Iniciar importación';
+  }
+}
+
+function reiniciar() {
+  datosJson = [];
+  datosValidos = [];
+  datosVacios = [];
+  datosAImportar = [];
+  document.getElementById('fileInput').value = '';
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('jsonInfo').innerHTML = '';
+  document.getElementById('debugInfo').classList.add('hidden');
+  dropZone.style.borderColor = '';
+  dropZone.querySelector('.drop-zone-title').textContent = 'Arrastra tu JSON aquí';
+  dropZone.querySelector('.drop-zone-sub').textContent = 'O haz clic para seleccionarlo · Formato: .json';
+  selOpt('fusionar');
+  goStep(1);
+}
+
+document.getElementById('btnModo').addEventListener('click', () => {
+  modoOscuro = !modoOscuro;
+  document.body.classList.toggle('light-mode', !modoOscuro);
+  document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : ' Modo oscuro';
+  localStorage.setItem('ct_modo', modoOscuro ? 'dark' : 'light');
+});
+document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+</script>
+
+</body>
+</html>

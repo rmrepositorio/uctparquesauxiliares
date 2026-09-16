@@ -7,76 +7,68 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<!-- SDK de Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <link rel="stylesheet" href="style.css">
 <style>
-/* Stats */
-.stats-row {
-  display: flex;
-  gap: 14px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
+.stats-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
 .stat-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  padding: 14px 20px;
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-  min-width: 160px;
+  background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  padding: 14px 20px; border-radius: 8px; box-shadow: var(--shadow); min-width: 160px;
 }
-.stat-label {
-  font-size: 0.85em;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-}
-.stat-value {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 1.6em;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-/* Tabla resumen */
+.stat-label { font-size: 0.85em; color: var(--text-muted); margin-bottom: 4px; }
+.stat-value { font-family: 'Rajdhani', sans-serif; font-size: 1.6em; font-weight: 700; color: var(--accent); }
 .table-container {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: var(--shadow);
-  overflow-x: auto;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; box-shadow: var(--shadow); overflow-x: auto;
 }
-#tablaResumen {
-  width: 100% !important;
-}
-#tablaResumen th {
-  white-space: nowrap;
-  font-size: 0.85em;
-}
-#tablaResumen td {
-  text-align: center;
-}
-#tablaResumen td:first-child {
-  text-align: left;
-  font-weight: 600;
-}
+#tablaResumen { width: 100% !important; }
+#tablaResumen th { white-space: nowrap; font-size: 0.85em; }
+#tablaResumen td { text-align: center; }
+#tablaResumen td:first-child { text-align: left; font-weight: 600; }
 .cell-zero { color: var(--text-muted); opacity: 0.5; }
 .cell-low { color: var(--text); }
 .cell-medium { color: #ffd166; font-weight: 600; }
 .cell-high { color: #ff6b6b; font-weight: 700; }
-
-/* Link volver */
+.dropdown { position: relative; display: inline-block; }
+.dd-panel {
+  display: none; position: absolute; z-index: 9999; top: calc(100% + 6px); left: 0;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.45); width: 260px; padding: 10px; font-size: 12px;
+}
+.dd-panel.open { display: block; }
+.dd-title {
+  font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 13px; color: var(--accent);
+  margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.dd-barra { display: flex; gap: 6px; margin-bottom: 8px; }
+.dd-barra button { flex: 1; font-size: 11px; padding: 4px 0; }
+.dd-search {
+  width: 100%; background: var(--input-bg, var(--bg3)); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px; padding: 5px 8px;
+  margin-bottom: 8px; font-size: 12px; box-sizing: border-box;
+}
+.dd-search:focus { outline: none; border-color: var(--accent); }
+.dd-list { max-height: 260px; overflow-y: auto; }
+.dd-row {
+  display: flex; align-items: center; gap: 8px; padding: 3px 4px;
+  border-radius: 4px; color: var(--text); cursor: pointer;
+}
+.dd-row:hover { background: var(--bg3); }
+.dd-row input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
+.dd-count { font-size: 11px; color: var(--text-muted); margin-left: 6px; }
 .back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 0.9em;
-  margin-bottom: 14px;
-  transition: opacity 0.2s;
+  display: inline-flex; align-items: center; gap: 6px; color: var(--accent);
+  text-decoration: none; font-size: 0.9em; margin-bottom: 14px; transition: opacity 0.2s;
 }
 .back-link:hover { opacity: 0.7; }
+.tabla-info {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 16px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px;
+}
+.tabla-info strong { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -88,40 +80,82 @@
   <button id="toggleModo">☀ Modo claro</button>
 </div>
 
-<div class="controls">
-  <label>Fecha inicio: <input type="date" id="fechaInicio"></label>
-  <label>Fecha fin: <input type="date" id="fechaFin"></label>
+<div class="container">
+  <div class="tabla-info">
+    📊 Tabla origen: <strong id="tablaDestino">incidencias</strong>
+  </div>
+
+  <div class="controls">
+    <label>Fecha inicio: <input type="date" id="fechaInicio"></label>
+    <label>Fecha fin: <input type="date" id="fechaFin"></label>
+
+    <div class="dropdown">
+      <button id="btnColumnas" type="button">▤ Columnas ▾</button>
+      <div class="dd-panel" id="panelColumnas">
+        <div class="dd-title">Columnas visibles</div>
+        <div class="dd-barra">
+          <button type="button" id="colTodas">Todas</button>
+          <button type="button" id="colNinguna">Ninguna</button>
+        </div>
+        <div class="dd-list" id="listaColumnas"></div>
+      </div>
+    </div>
+
+    <div class="dropdown">
+      <button id="btnVehiculos" type="button">🚛 Vehículos ▾</button>
+      <div class="dd-panel" id="panelVehiculos">
+        <div class="dd-title">Vehículos (VHLO) <span class="dd-count" id="contVehiculos"></span></div>
+        <input type="text" class="dd-search" id="buscarVehiculo" placeholder="Buscar vehículo...">
+        <div class="dd-barra">
+          <button type="button" id="vehTodos">Todos</button>
+          <button type="button" id="vehNinguno">Ninguno</button>
+        </div>
+        <div class="dd-list" id="listaVehiculos"></div>
+      </div>
+    </div>
+
+    <button id="btnAleatorio" type="button">🔀 Orden aleatorio</button>
+    <button id="btnResetOrden" type="button">↕ Orden por total</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Vehículos</div>
+      <div class="stat-value" id="statVehiculos">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Averías</div>
+      <div class="stat-value" id="statAverias">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Familias Avería</div>
+      <div class="stat-value" id="statFamilias">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Días en Rango</div>
+      <div class="stat-value" id="statDias">0</div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table id="tablaResumen" class="display" width="100%"></table>
+  </div>
 </div>
 
-<div class="stats-row">
-  <div class="stat-card">
-    <div class="stat-label">Total Vehículos</div>
-    <div class="stat-value" id="statVehiculos">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Total Averías</div>
-    <div class="stat-value" id="statAverias">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Familias Avería</div>
-    <div class="stat-value" id="statFamilias">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Días en Rango</div>
-    <div class="stat-value" id="statDias">0</div>
-  </div>
-</div>
-
-<div class="table-container">
-  <table id="tablaResumen" class="display" width="100%"></table>
-</div>
+<!-- Cargar supabase-config.js para usar TABLA_PRINCIPAL -->
+<script src="supabase-config.js"></script>
 
 <script>
 // Estado
-let modoOscuro = true;
+let modoOscuro = localStorage.getItem('ct_modo') !== 'light';
 let allData = [];
 let familias = [];
 let tablaDT = null;
+let todosVehiculos = [];
+let vehiculosSel = new Set();
+let ordenAleatorio = false;
+
+if (!modoOscuro) document.body.classList.add('light-mode');
 
 // Modo claro/oscuro
 document.getElementById('toggleModo').addEventListener('click', () => {
@@ -131,40 +165,110 @@ document.getElementById('toggleModo').addEventListener('click', () => {
   if (tablaDT) tablaDT.draw(false);
 });
 
-// Cargar datos
-fetch('resumen_full.json')
-  .then(r => r.json())
-  .then(data => {
-    // Normalizar y parsear fechas
-    data.forEach(d => {
-      if (d['FAMILIA AVERIA']) {
-        d['FAMILIA AVERIA'] = d['FAMILIA AVERIA'].toString().trim().toUpperCase();
-      }
-      if (d['VHLO']) {
-        d['VHLO'] = d['VHLO'].toString().trim();
-      }
-      try {
-        if (d['FECHA AVISO']) {
-          const parts = d['FECHA AVISO'].split('/').map(Number);
-          if (parts.length === 3) {
-            const fecha = new Date(parts[2], parts[1] - 1, parts[0]);
-            if (!isNaN(fecha)) d.fechaJS = fecha;
-          }
+// ═══════════════════════════════════════════════════════════════
+// ✅ CARGAR DATOS DESDE TABLA_PRINCIPAL (con paginación)
+// ═══════════════════════════════════════════════════════════════
+async function cargarDatos() {
+  try {
+    let todosLosDatos = [];
+    let desde = 0;
+    const limite = 1000;
+    
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from(TABLA_PRINCIPAL)  // ✅ Usa la variable
+        .select('*')
+        .range(desde, desde + limite - 1)
+        .order('id', { ascending: true });
+      
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      
+      todosLosDatos = todosLosDatos.concat(data);
+      if (data.length < limite) break;
+      desde += limite;
+    }
+    
+    console.log('Registros cargados de Supabase:', todosLosDatos.length);
+    if (todosLosDatos.length > 0) {
+      console.log('Primer registro:', todosLosDatos[0]);
+    }
+    
+    // ✅ Mapear claves snake_case de Supabase a formato que usa el resto del código
+    allData = todosLosDatos.map(d => {
+      // Parsear fecha (puede venir en formato dd/mm/yyyy o YYYY-MM-DD)
+      let fechaJS = null;
+      if (d.fecha_aviso) {
+        const fechaStr = d.fecha_aviso.toString().trim();
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(fechaStr)) {
+          const parts = fechaStr.split('/').map(Number);
+          fechaJS = new Date(parts[2], parts[1] - 1, parts[0]);
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+          const parts = fechaStr.split('-').map(Number);
+          fechaJS = new Date(parts[0], parts[1] - 1, parts[2]);
+        } else {
+          const d2 = new Date(fechaStr);
+          if (!isNaN(d2)) fechaJS = d2;
         }
-      } catch (e) {}
+      }
+      
+      return {
+        'VHLO': (d.vhlo || '').toString().trim().toUpperCase(),
+        'FAMILIA AVERIA': (d.familia_averia || '').toString().trim().toUpperCase(),
+        'FAMILIA': (d.familia || '').toString().trim().toUpperCase(),
+        'DEFICIENCIAS DETECTADAS': (d.deficiencias || '').toString().trim().toUpperCase(),
+        'DESCRIPCION AVERIA': (d.descripcion_averia || '').toString().trim(),
+        'FECHA AVISO': d.fecha_aviso || '',
+        'HORA': d.hora || '',
+        'TURNO': (d.turno || '').toString().trim().toUpperCase(),
+        'N AVISO': (d.n_aviso || '').toString().trim(),
+        'Nº AVISO': (d.n_aviso || '').toString().trim(),
+        'CONDUCTOR': d.conductor || '',
+        'ORIGEN AVISO': (d.origen_aviso || '').toString().trim().toUpperCase(),
+        'TIPO ORDEN': (d.tipo_orden || '').toString().trim().toUpperCase(),
+        'FOTO': d.foto || '',
+        'AVISO ANTIGUO?': d.aviso_antiguo || '',
+        'COLUMNA1': d.columna1 || '',
+        'COLUMNA2': d.columna2 || '',
+        'COLUMNA3': d.columna3 || '',
+        'COLUMNA4': d.columna4 || '',
+        fechaJS: fechaJS
+      };
     });
-
-    allData = data.filter(d => d.fechaJS && d.VHLO && d['FAMILIA AVERIA']);
-
+    
+    // Filtrar registros válidos (con VHLO, FAMILIA AVERIA y fecha)
+    allData = allData.filter(d => d.fechaJS && !isNaN(d.fechaJS) && d['VHLO'] !== '' && d['FAMILIA AVERIA'] !== '');
+    
+    console.log('Registros válidos después de filtrar:', allData.length);
+    
     // Obtener familias únicas
     familias = [...new Set(allData.map(d => d['FAMILIA AVERIA']))].filter(f => f && f !== '****').sort();
-
+    console.log('Familias únicas:', familias.length, familias);
+    
+    // Lista completa de vehículos ordenada numéricamente
+    todosVehiculos = [...new Set(allData.map(d => d['VHLO']))].filter(Boolean)
+      .sort((a, b) => {
+        const na = parseFloat(a), nb = parseFloat(b);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return a.localeCompare(b);
+      });
+    
+    // Mostrar nombre de tabla
+    document.getElementById('tablaDestino').textContent = TABLA_PRINCIPAL;
+    
     // Inicializar fechas con el rango de los datos
     inicializarFechas();
     initTable();
+    construirPanelColumnas();
+    construirPanelVehiculos();
+    initControles();
     updateTable();
-  })
-  .catch(e => console.error('Error cargando JSON:', e));
+    
+  } catch (e) {
+    console.error('Error cargando datos:', e);
+    alert('Error al cargar datos: ' + e.message);
+  }
+}
 
 // Inicializar fechas
 function inicializarFechas() {
@@ -245,7 +349,7 @@ function updateTable() {
   // Agrupar por vehículo
   const resumen = {};
   filtrados.forEach(d => {
-    const vhlo = d.VHLO;
+    const vhlo = d['VHLO'];
     const fam = d['FAMILIA AVERIA'];
 
     if (!resumen[vhlo]) {
@@ -257,11 +361,19 @@ function updateTable() {
     resumen[vhlo].total++;
   });
 
-  const tableData = Object.values(resumen);
+  let tableData = Object.values(resumen);
+
+  // Filtrar por vehículos seleccionados (vacío = todos)
+  if (vehiculosSel.size > 0) {
+    tableData = tableData.filter(r => vehiculosSel.has(r.vehiculo));
+  }
+
+  // Averías correspondientes a los vehículos mostrados
+  const averiasMostradas = tableData.reduce((s, r) => s + r.total, 0);
 
   // Actualizar estadísticas
   document.getElementById('statVehiculos').textContent = tableData.length.toLocaleString('es-ES');
-  document.getElementById('statAverias').textContent = filtrados.length.toLocaleString('es-ES');
+  document.getElementById('statAverias').textContent = averiasMostradas.toLocaleString('es-ES');
   document.getElementById('statFamilias').textContent = familias.length;
 
   if (fi && ff) {
@@ -271,11 +383,130 @@ function updateTable() {
     document.getElementById('statDias').textContent = '0';
   }
 
+  // Modo aleatorio: barajar filas
+  if (ordenAleatorio) {
+    for (let i = tableData.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tableData[i], tableData[j]] = [tableData[j], tableData[i]];
+    }
+  }
+
   // Actualizar DataTable
   tablaDT.clear();
   tablaDT.rows.add(tableData);
+  if (ordenAleatorio) tablaDT.order([]);
   tablaDT.draw();
 }
+
+// ── Panel de columnas visibles ─
+function construirPanelColumnas() {
+  const lista = document.getElementById('listaColumnas');
+  const cols = ['Vehículo', 'Total', ...familias];
+  lista.innerHTML = '';
+  cols.forEach((titulo, idx) => {
+    const row = document.createElement('label');
+    row.className = 'dd-row';
+    row.innerHTML = `<input type="checkbox" data-col="${idx}" checked><span>${titulo}</span>`;
+    lista.appendChild(row);
+  });
+  lista.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      tablaDT.column(parseInt(cb.dataset.col)).visible(cb.checked);
+    });
+  });
+  document.getElementById('colTodas').addEventListener('click', () => setColumnas(true));
+  document.getElementById('colNinguna').addEventListener('click', () => setColumnas(false));
+}
+function setColumnas(visible) {
+  document.querySelectorAll('#listaColumnas input[type=checkbox]').forEach(cb => {
+    cb.checked = visible;
+    tablaDT.column(parseInt(cb.dataset.col)).visible(visible);
+  });
+}
+
+// ── Panel de vehículos (VHLO) ─
+function construirPanelVehiculos() {
+  const lista = document.getElementById('listaVehiculos');
+  lista.innerHTML = '';
+  todosVehiculos.forEach(v => {
+    const row = document.createElement('label');
+    row.className = 'dd-row';
+    row.dataset.veh = v;
+    row.innerHTML = `<input type="checkbox" value="${v}"><span>${v}</span>`;
+    lista.appendChild(row);
+  });
+  lista.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) vehiculosSel.add(cb.value);
+      else vehiculosSel.delete(cb.value);
+      actualizarContadorVeh();
+      updateTable();
+    });
+  });
+  document.getElementById('vehTodos').addEventListener('click', () => setVehiculos(true));
+  document.getElementById('vehNinguno').addEventListener('click', () => setVehiculos(false));
+  document.getElementById('buscarVehiculo').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    lista.querySelectorAll('.dd-row').forEach(r => {
+      r.style.display = r.dataset.veh.toLowerCase().includes(q) ? 'flex' : 'none';
+    });
+  });
+  actualizarContadorVeh();
+}
+function setVehiculos(seleccionar) {
+  document.querySelectorAll('#listaVehiculos .dd-row').forEach(r => {
+    if (r.style.display === 'none') return;
+    const cb = r.querySelector('input');
+    cb.checked = seleccionar;
+    if (seleccionar) vehiculosSel.add(cb.value);
+    else vehiculosSel.delete(cb.value);
+  });
+  actualizarContadorVeh();
+  updateTable();
+}
+function actualizarContadorVeh() {
+  const cont = document.getElementById('contVehiculos');
+  cont.textContent = vehiculosSel.size === 0
+    ? `(todos: ${todosVehiculos.length})`
+    : `(${vehiculosSel.size} sel.)`;
+}
+
+// ── Controles ──
+function initControles() {
+  document.getElementById('btnAleatorio').addEventListener('click', () => {
+    ordenAleatorio = true;
+    updateTable();
+  });
+  document.getElementById('btnResetOrden').addEventListener('click', () => {
+    ordenAleatorio = false;
+    tablaDT.order([1, 'desc']);
+    updateTable();
+  });
+
+  const toggles = [
+    ['btnColumnas', 'panelColumnas'],
+    ['btnVehiculos', 'panelVehiculos']
+  ];
+  toggles.forEach(([btn, panel]) => {
+    document.getElementById(btn).addEventListener('click', e => {
+      e.stopPropagation();
+      const p = document.getElementById(panel);
+      const abierto = p.classList.contains('open');
+      document.querySelectorAll('.dd-panel').forEach(x => x.classList.remove('open'));
+      if (!abierto) p.classList.add('open');
+    });
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.dropdown')) {
+      document.querySelectorAll('.dd-panel').forEach(x => x.classList.remove('open'));
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// INICIALIZACIÓN
+// ═══════════════════════════════════════════════════════════════
+cargarDatos();
 </script>
 </body>
 </html>

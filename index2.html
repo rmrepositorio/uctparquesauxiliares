@@ -3,43 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Incidencias — Editable | Control Tráfico</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReorder.dataTables.min.css">
+<title>Dashboard — Control Tráfico</title>
 <link rel="stylesheet" href="style.css">
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  td.celda-editable { cursor: pointer; transition: background 0.15s; position: relative; }
-  td.celda-editable:hover { background: rgba(20, 184, 166, 0.1) !important; outline: 1px dashed var(--accent); }
-  td.celda-editable::after { content: '✎'; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--accent); opacity: 0; transition: opacity 0.15s; }
-  td.celda-editable:hover::after { opacity: 0.7; }
-  td input.edit-input { width: 100%; padding: 6px 8px; background: var(--input-bg); color: var(--input-text); border: 2px solid var(--accent); border-radius: 6px; font-size: 12px; font-family: 'Inter', sans-serif; outline: none; }
-  td.guardando { background: rgba(245, 158, 11, 0.15) !important; color: var(--accent2); font-style: italic; }
-  td.error { background: rgba(239, 68, 68, 0.15) !important; animation: shake 0.4s; }
-  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
-  .btn-eliminar { background: transparent; color: var(--accent4); border: 1px solid var(--accent4); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: all 0.2s; }
-  .btn-eliminar:hover { background: var(--accent4); color: white; }
-  .btn-nueva { background: var(--accent); color: var(--bg); border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; }
-  .btn-nueva:hover { opacity: 0.9; transform: translateY(-1px); }
-  .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; border-radius: 10px; color: white; font-weight: 500; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 99999; animation: slideIn 0.3s ease-out; max-width: 400px; }
-  .toast.exito { background: #10b981; } .toast.error { background: #ef4444; } .toast.info { background: #3b82f6; }
-  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-  .contador { background: var(--kpi-bg); border: 1px solid var(--kpi-border); border-radius: 10px; padding: 12px 20px; display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text); }
-  .contador strong { color: var(--accent); font-size: 1.3em; font-family: 'Rajdhani', sans-serif; }
-  .ayuda { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 10px 16px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
-  .ayuda strong { color: var(--accent3); }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--border); }
+  .header h1 { font-size: 1.8em; color: var(--accent); margin: 0; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .btn-nav { background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.9em; transition: all 0.2s; }
+  .btn-nav:hover { background: var(--btn-hover); color: var(--btn-hover-text); }
+  
+  .controls { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .controls label { font-size: 0.9em; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .controls input[type="date"] { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg2); color: var(--text); }
+  
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; text-align: center; }
+  .stat-label { font-size: 0.8em; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 2.5em; font-weight: 700; color: var(--accent); }
+  
+  .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 24px; }
+  .chart-container { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .chart-container h3 { margin: 0 0 16px 0; font-size: 1.1em; color: var(--text); }
+  .chart-wrapper { position: relative; height: 300px; }
+  
   .panel-filtros { background: var(--chart-bg); border: 1px solid var(--chart-border); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
-  .filtros-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .filtros-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .btn-filtro { display: inline-flex; align-items: center; gap: 6px; background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border); padding: 7px 14px; border-radius: 8px; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
   .btn-filtro:hover { background: var(--btn-hover); color: var(--btn-hover-text); border-color: var(--btn-hover); transform: translateY(-1px); }
   .btn-filtro.activo { background: var(--accent); color: var(--bg); border-color: var(--accent); }
   .sep-filtros { width: 1px; height: 28px; background: var(--border); margin: 0 4px; }
-  .busqueda-desc { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .busqueda-desc input { flex: 1; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-family: 'Inter', sans-serif; }
-  .busqueda-desc input:focus { outline: none; border-color: var(--accent); }
+  
   .excl-menu { position: fixed; z-index: 9999; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); width: 280px; padding: 16px; font-size: 12px; }
   .excl-title { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
   .excl-barra { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -50,115 +46,132 @@
   .excl-row input[type=checkbox], .excl-row input[type=radio] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
   .excl-aplicar { width: 100%; background: var(--accent); color: var(--bg); font-weight: 600; border: none; padding: 10px; border-radius: 8px; cursor: pointer; transition: opacity 0.2s; }
   .excl-aplicar:hover { opacity: 0.85; }
-  .col-menu { position: absolute; z-index: 9999; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; box-shadow: var(--shadow-lg); min-width: 200px; display: none; }
-  .col-menu label { display: flex; align-items: center; gap: 8px; padding: 6px 0; color: var(--text); font-size: 12px; cursor: pointer; }
-  .col-menu input { accent-color: var(--accent); }
+  
   .filtros-activos { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; min-height: 24px; }
   .filtro-tag { font-size: 11px; background: var(--accent); color: var(--bg); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-weight: 500; transition: opacity 0.2s; }
   .filtro-tag:hover { opacity: 0.8; }
   .filtro-tag.filtro-excluido { background: var(--accent4) !important; color: #ffffff !important; }
+  
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
 </style>
-
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<div class="header">
-  <h1> Incidencias <span style="font-size:0.6em;color:var(--text-muted);font-weight:400;">— Editable</span></h1>
-  <a href="index.html" class="btn-nav">🏠 Dashboard</a>
-  <a href="reiteradas.html" class="btn-nav">⚠️ Reiteradas</a>
-  <a href="pegar.html" class="btn-nav">📥 Pegar Datos</a>
-  <button id="btnNueva" class="btn-nueva">➕ Nueva incidencia</button>
-  <button id="toggleModo" class="btn-nav">☀ Modo claro</button>
-</div>
-
 <div class="container">
+  <div class="header">
+    <h1>📊 Dashboard</h1>
+    <div class="header-actions">
+      <a href="incidencias.html" class="btn-nav">📋 Incidencias</a>
+      <a href="reiteradas.html" class="btn-nav">⚠️ Reiteradas</a>
+      <a href="resumen_vehiculos.html" class="btn-nav">📊 Resumen</a>
+      <a href="importar.html" class="btn-nav"> Importar</a>
+      <button id="btnModo" class="btn-nav">☀ Modo claro</button>
+    </div>
+  </div>
+
   <div class="controls">
     <label>📅 Desde: <input type="date" id="fechaInicio"></label>
     <label>📅 Hasta: <input type="date" id="fechaFin"></label>
-    <button id="btnAtras" class="btn-nav" title="Deshacer filtro">◀ Atrás</button>
-    <button id="btnAdelante" class="btn-nav" title="Rehacer filtro">Adelante ▶</button>
-    <button id="btnLimpiar" class="btn-nav" title="Limpiar todos los filtros">✕ Limpiar filtros</button>
+    <button id="btnLimpiar" class="btn-nav">✕ Limpiar filtros</button>
     <button id="btnRecargar" class="btn-nav">🔄 Recargar</button>
-    <button id="btnColumnas" class="btn-nav" style="position:relative;">👁 Columnas</button>
-    <button id="btnExportarCSV" class="btn-nav">📥 Exportar CSV</button>
-    <div style="margin-left:auto;">
-      <div class="contador">📊 Total: <strong id="totalRegistros">0</strong> incidencias</div>
+    <div style="margin-left:auto; font-size: 0.9em; color: var(--text-muted);">
+      📊 Tabla: <strong id="tablaInfo">incidencias</strong> · Total: <strong id="totalRegistros">0</strong>
     </div>
   </div>
 
   <!-- Panel de filtros por categoría -->
   <div class="panel-filtros">
     <div class="filtros-grid">
-      <button class="btn-filtro" data-campo="familia"> Familia Vehículo</button>
-      <button class="btn-filtro" data-campo="vhlo">🔢 Vehículo (VHLO)</button>
+      <button class="btn-filtro" data-campo="familia">🚛 Familia Vehículo</button>
+      <button class="btn-filtro" data-campo="vhlo"> Vehículo (VHLO)</button>
       <button class="btn-filtro" data-campo="familia_averia">🔧 Familia Avería</button>
-      <button class="btn-filtro" data-campo="turno"> Turno</button>
-      <button class="btn-filtro" data-campo="origen_aviso">📍 Origen Aviso</button>
+      <button class="btn-filtro" data-campo="turno">🕐 Turno</button>
+      <button class="btn-filtro" data-campo="origen_aviso"> Origen Aviso</button>
       <button class="btn-filtro" data-campo="tipo_orden">📋 Tipo Orden</button>
       <button class="btn-filtro" data-campo="conductor">👤 Conductor</button>
       <button class="btn-filtro" data-campo="deficiencias">⚠️ Deficiencias</button>
       <div class="sep-filtros"></div>
       <button class="btn-filtro" data-campo-especial="recurrencia">🔄 Recurrencia</button>
-      <button class="btn-filtro" data-campo-especial="subfamilia_trasera"> Subfamilia Trasera</button>
+      <button class="btn-filtro" data-campo-especial="subfamilia_trasera">🚚 Subfamilia Trasera</button>
       <button class="btn-filtro" data-campo-especial="subfamilia_lateral">📦 Subfamilia Lateral</button>
-    </div>
-    <div class="busqueda-desc">
-      <label style="color:var(--text-muted); font-size:12px; font-weight:500; white-space:nowrap;">🔍 Buscar descripción:</label>
-      <input type="text" id="buscarDescripcion" placeholder="Escribe para filtrar por descripción de avería...">
     </div>
   </div>
 
   <div id="filtrosActivos" class="filtros-activos"></div>
 
-  <div class="ayuda">
-     <strong>Clic en cualquier celda</strong> para editarla · <strong>Enter</strong> para guardar · <strong>Esc</strong> para cancelar · Usa los botones de arriba para filtrar por categoría
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Incidencias</div>
+      <div class="stat-value" id="statTotal">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Vehículos Únicos</div>
+      <div class="stat-value" id="statVehiculos">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Familias Avería</div>
+      <div class="stat-value" id="statFamilias">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Promedio Diario</div>
+      <div class="stat-value" id="statPromedio">0</div>
+    </div>
   </div>
 
-  <div style="background:var(--chart-bg); border:1px solid var(--chart-border); border-radius:12px; padding:20px; box-shadow:var(--shadow);">
-    <table id="tablaIncidencias" class="display" style="width:100%">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Fecha Aviso</th>
-          <th>Hora</th>
-          <th>Turno</th>
-          <th>VHLO</th>
-          <th>Familia</th>
-          <th>Conductor</th>
-          <th>Familia Avería</th>
-          <th>Deficiencias</th>
-          <th>Descripción Avería</th>
-          <th>Origen Aviso</th>
-          <th>Tipo Orden</th>
-          <th>Nº Aviso</th>
-          <th>Foto</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <div class="charts-grid">
+    <div class="chart-container">
+      <h3>🥧 Familia Avería</h3>
+      <div class="chart-wrapper">
+        <canvas id="chartFamilia"></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h3>📊 Top 20 Vehículos</h3>
+      <div class="chart-wrapper">
+        <canvas id="chartVehiculo"></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h3>📈 Evolución Mensual</h3>
+      <div class="chart-wrapper">
+        <canvas id="chartEvolucion"></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h3>🔍 Top 30 Descripciones</h3>
+      <div class="chart-wrapper">
+        <canvas id="chartDescripcion"></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h3> Carga Lateral - Subfamilias</h3>
+      <div class="chart-wrapper">
+        <canvas id="chartCargaLateral"></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h3>🚛 Carga Trasera - Subfamilias</h3>
+      <div class="chart-wrapper">
+        <canvas id="chartCargaTrasera"></canvas>
+      </div>
+    </div>
   </div>
 </div>
-
-<!-- Menú de columnas -->
-<div class="col-menu" id="colMenu"></div>
 
 <!-- ✅ Cargar supabase-config.js para usar TABLA_PRINCIPAL -->
 <script src="supabase-config.js"></script>
 
 <script>
-let tablaDT;
 let datosOriginales = [];
 let datosFiltrados = [];
 let modoOscuro = localStorage.getItem('ct_modo') !== 'light';
 let filtrosActivos = {};
 let exclusiones = {};
-let historial = [];
-let historialIdx = -1;
+let charts = {};
 
 const MAPA_TIPO_ORDEN = { 'L02': 'Accidente', 'L05': 'Golpe / Mal Uso' };
 const ETIQUETA_AVERIA = 'Avería';
@@ -207,20 +220,34 @@ function normStr(s) {
   return s.toString().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 }
 
-function toast(texto, tipo = 'info') {
-  const t = document.createElement('div');
-  t.className = `toast ${tipo}`;
-  t.textContent = texto;
-  document.body.appendChild(t);
-  setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+function getDescripcion(row) {
+  const clavesPosibles = ['DESCRIPCION AVERIA', 'DESCRIPCION', 'descripcion_averia'];
+  for (const k of Object.keys(row)) {
+    const kn = k.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z ]/g, '').trim();
+    if (clavesPosibles.some(c => kn === c)) {
+      return (row[k] || '').toString().trim();
+    }
+  }
+  return '';
 }
 
-// ═══════════════════════════════════════════════════════════════
+function genColores(n) {
+  const PALETA = ['#00d4aa','#7c6fe0','#ff6b6b','#ffd166','#06d6a0','#118ab2','#ef476f','#f78c6b','#88d498','#c77dff','#48cae4','#f4a261','#e76f51','#2ec4b6','#e9c46a','#a8dadc','#457b9d','#e63946','#2a9d8f','#f3722c'];
+  const cols = [];
+  for (let i = 0; i < n; i++) cols.push(PALETA[i % PALETA.length]);
+  return cols;
+}
+
+function getLegendColor() {
+  return modoOscuro ? '#e0e0e0' : '#333';
+}
+
+// ══════════════════════════════════════════════════════════════
 // ✅ CARGAR DATOS DESDE TABLA_PRINCIPAL (con paginación)
 // ═══════════════════════════════════════════════════════════════
 async function cargarDatos() {
   try {
-    document.getElementById('totalRegistros').textContent = '...';
+    document.getElementById('statTotal').textContent = '...';
     
     let todosLosDatos = [];
     let desde = 0;
@@ -228,7 +255,7 @@ async function cargarDatos() {
     
     while (true) {
       const { data, error } = await supabaseClient
-        .from(TABLA_PRINCIPAL)  // ✅ Usa la variable
+        .from(TABLA_PRINCIPAL)  // ✅ CAMBIADO: usa TABLA_PRINCIPAL
         .select('*')
         .range(desde, desde + limite - 1)
         .order('id', { ascending: true });
@@ -259,256 +286,42 @@ async function cargarDatos() {
       foto: d.foto || ''
     }));
     
-    if (!tablaDT) inicializarTabla();
+    document.getElementById('tablaInfo').textContent = TABLA_PRINCIPAL;
+    document.getElementById('totalRegistros').textContent = todosLosDatos.length.toLocaleString('es-ES');
+    
+    inicializarFechas();
     cargarEstado();
     aplicarFiltros();
     
-    toast(`✅ ${todosLosDatos.length} incidencias cargadas desde ${TABLA_PRINCIPAL}`, 'exito');
-    
   } catch (e) {
     console.error('Error cargando datos:', e);
-    toast('❌ Error: ' + e.message, 'error');
+    alert('Error al cargar datos: ' + e.message);
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// INICIALIZAR TABLA
-// ═══════════════════════════════════════════════════════════════
-function inicializarTabla() {
-  tablaDT = $('#tablaIncidencias').DataTable({
-    data: [],
-    columns: [
-      { title: 'ID', data: 'id', width: '60px' },
-      { title: 'Fecha Aviso', data: 'fecha_aviso', width: '100px' },
-      { title: 'Hora', data: 'hora', width: '70px' },
-      { title: 'Turno', data: 'turno', width: '70px' },
-      { title: 'VHLO', data: 'vhlo', width: '80px' },
-      { title: 'Familia', data: 'familia', width: '120px' },
-      { title: 'Conductor', data: 'conductor', width: '100px' },
-      { title: 'Familia Avería', data: 'familia_averia', width: '120px' },
-      { title: 'Deficiencias', data: 'deficiencias', width: '150px' },
-      { title: 'Descripción', data: 'descripcion_averia', width: '220px' },
-      { title: 'Origen', data: 'origen_aviso', width: '100px' },
-      { title: 'Tipo Orden', data: 'tipo_orden', width: '90px' },
-      { 
-        title: 'Nº Aviso', 
-        data: 'n_aviso', 
-        width: '110px',
-        render: function(d, t, row) {
-          // ✅ Buscar por clave exacta de Supabase
-          if (row.n_aviso !== undefined && row.n_aviso !== null && row.n_aviso !== '') return row.n_aviso;
-          return '-';
-        }
-      },
-      { title: 'Foto', data: 'foto', width: '60px' },
-      { title: 'Acciones', width: '100px', orderable: false, searchable: false,
-        render: function(d, t, row) {
-          return `<button class="btn-eliminar" data-id="${row.id}">🗑️ Eliminar</button>`;
-        }
-      }
-    ],
-    orderCellsTop: true,
-    colReorder: true,
-    scrollX: true,
-    pageLength: 25,
-    lengthChange: true,
-    order: [[0, 'desc']],
-    dom: '<"top"lf>rt<"bottom"ip><"clear">',
-    language: {
-      search: 'Buscar:',
-      lengthMenu: 'Mostrar _MENU_ registros',
-      info: 'Mostrando _START_ – _END_ de _TOTAL_ registros',
-      infoEmpty: 'Mostrando 0 – 0 de 0 registros',
-      infoFiltered: '(filtrado de _MAX_ registros totales)',
-      zeroRecords: 'No se encontraron resultados',
-      emptyTable: 'No hay datos disponibles',
-      paginate: { previous: '‹ Ant', next: 'Sig ›' }
-    },
-    lengthMenu: [[25, 50, 100, 200, -1], [25, 50, 100, 200, "Todos"]],
-    drawCallback: function() {
-      setTimeout(crearInputPaginaManual, 100);
-    }
-  });
+function parseFecha(fechaStr) {
+  if (!fechaStr) return null;
+  const parts = fechaStr.split('/').map(Number);
+  if (parts.length === 3 && !parts.some(isNaN)) {
+    return new Date(parts[2], parts[1] - 1, parts[0]);
+  }
+  return null;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// INPUT DE PÁGINA MANUAL
-// ═══════════════════════════════════════════════════════════════
-function crearInputPaginaManual() {
-  const paginacion = document.querySelector('#tablaIncidencias_paginate');
-  if (!paginacion) return;
+function inicializarFechas() {
+  const fechas = datosOriginales.filter(d => {
+    const fecha = parseFecha(d.fecha_aviso);
+    return fecha && !isNaN(fecha);
+  }).map(d => parseFecha(d.fecha_aviso));
   
-  const existingWrap = document.getElementById('paginaManualWrap');
-  if (existingWrap) existingWrap.remove();
+  if (!fechas.length) return;
   
-  const wrap = document.createElement('span');
-  wrap.id = 'paginaManualWrap';
-  wrap.className = 'pagina-manual';
+  document.getElementById('fechaInicio').valueAsDate = new Date(Math.min(...fechas));
+  document.getElementById('fechaFin').valueAsDate = new Date(Math.max(...fechas));
   
-  const total = tablaDT.page.info().pages;
-  const pagActual = tablaDT.page.info().page + 1;
-  
-  wrap.innerHTML = `<span>Ir a:</span><input type="number" id="inputPagina" min="1" max="${total}" value="${pagActual}"><button id="btnIrPagina">Ir</button><span class="total-pag">de <strong id="totalPaginas">${total}</strong></span>`;
-  
-  paginacion.appendChild(wrap);
-  
-  const input = document.getElementById('inputPagina');
-  const btn = document.getElementById('btnIrPagina');
-  
-  function irAPagina() {
-    let num = parseInt(input.value);
-    const totalPages = tablaDT.page.info().pages;
-    
-    if (isNaN(num) || num < 1) {
-      input.value = 1;
-      tablaDT.page(0).draw(false);
-      return;
-    }
-    if (num > totalPages) {
-      input.value = totalPages;
-      tablaDT.page(totalPages - 1).draw(false);
-      return;
-    }
-    
-    tablaDT.page(num - 1).draw(false);
-    setTimeout(() => {
-      input.focus();
-      input.select();
-    }, 100);
-  }
-  
-  input.addEventListener('focus', () => input.select());
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      irAPagina();
-    }
-  });
-  btn.addEventListener('click', e => {
-    e.preventDefault();
-    irAPagina();
-  });
+  document.getElementById('fechaInicio').addEventListener('change', aplicarFiltros);
+  document.getElementById('fechaFin').addEventListener('change', aplicarFiltros);
 }
-
-$('#tablaIncidencias').on('draw.dt', function() {
-  setTimeout(crearInputPaginaManual, 100);
-});
-
-// ═══════════════════════════════════════════════════════════════
-// EDICIÓN DE CELDAS
-// ═══════════════════════════════════════════════════════════════
-$('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)', function() {
-  const celda = $(this);
-  if (celda.find('input').length > 0) return;
-  
-  const colIdx = celda.index();
-  const fila = celda.closest('tr');
-  const row = tablaDT.row(fila);
-  const rowData = row.data();
-  const id = rowData.id;
-  
-  const campos = ['id', 'fecha_aviso', 'hora', 'turno', 'vhlo', 'familia', 'conductor', 'familia_averia', 'deficiencias', 'descripcion_averia', 'origen_aviso', 'tipo_orden', 'n_aviso', 'foto'];
-  const campo = campos[colIdx];
-  if (!campo) return;
-  
-  const valorActual = rowData[campo] || '';
-  const input = $(`<input type="text" class="edit-input" value="${valorActual.replace(/"/g, '&quot;')}">`);
-  
-  celda.empty().append(input);
-  input.focus().select();
-  
-  function guardar() {
-    const nuevoValor = input.val().trim();
-    if (nuevoValor === valorActual) {
-      celda.text(valorActual);
-      return;
-    }
-    
-    celda.addClass('guardando').text('⏳');
-    
-    // ✅ Usa la función de supabase-config.js
-    actualizarIncidencia(id, { [campo]: nuevoValor })
-      .then(() => {
-        rowData[campo] = nuevoValor;
-        row.data(rowData).draw(false);
-        toast('✅ Actualizado', 'exito');
-      })
-      .catch(error => {
-        celda.removeClass('guardando').addClass('error').text(valorActual);
-        setTimeout(() => celda.removeClass('error'), 1500);
-        toast('❌ Error: ' + error.message, 'error');
-      });
-  }
-  
-  input.on('blur', guardar);
-  input.on('keydown', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); input.off('blur'); guardar(); }
-    else if (e.key === 'Escape') { input.off('blur'); celda.text(valorActual); }
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════
-// ELIMINAR
-// ═══════════════════════════════════════════════════════════════
-$('#tablaIncidencias tbody').on('click', '.btn-eliminar', async function(e) {
-  e.stopPropagation();
-  const id = $(this).data('id');
-  if (!confirm(`¿Eliminar incidencia #${id}?`)) return;
-  
-  try {
-    // ✅ Usa la función de supabase-config.js
-    await eliminarIncidencia(id);
-    toast('✅ Eliminada', 'exito');
-    cargarDatos();
-  } catch (error) {
-    toast(' Error: ' + error.message, 'error');
-  }
-});
-
-// ═══════════════════════════════════════════════════════════════
-// NUEVA INCIDENCIA
-// ═══════════════════════════════════════════════════════════════
-document.getElementById('btnNueva').addEventListener('click', async function() {
-  const nueva = {
-    fecha_aviso: new Date().toLocaleDateString('es-ES'),
-    hora: '', turno: '', vhlo: '', familia: '', conductor: '',
-    familia_averia: '', deficiencias: '', descripcion_averia: 'NUEVA',
-    origen_aviso: '', tipo_orden: '', n_aviso: '', foto: 'NO'
-  };
-  try {
-    toast('🔄 Creando...', 'info');
-    // ✅ Usa la función de supabase-config.js
-    await insertarIncidencias([nueva]);
-    toast('✅ Creada', 'exito');
-    setTimeout(() => cargarDatos(), 500);
-  } catch (error) {
-    toast('❌ Error: ' + error.message, 'error');
-  }
-});
-
-// ═══════════════════════════════════════════════════════════════
-// EXPORTAR CSV
-// ═══════════════════════════════════════════════════════════════
-document.getElementById('btnExportarCSV').addEventListener('click', () => {
-  if (datosFiltrados.length === 0) { toast('️ Sin datos', 'error'); return; }
-  
-  let csv = '\uFEFF';
-  csv += 'ID;Fecha;Hora;Turno;VHLO;Familia;Conductor;Familia Avería;Deficiencias;Descripción;Origen;Tipo Orden;Nº Aviso;Foto\n';
-  
-  datosFiltrados.forEach(d => {
-    const fila = [d.id, d.fecha_aviso, d.hora, d.turno, d.vhlo, d.familia, d.conductor, d.familia_averia, d.deficiencias, d.descripcion_averia, d.origen_aviso, d.tipo_orden, d.n_aviso, d.foto];
-    csv += fila.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(';') + '\n';
-  });
-  
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `incidencias_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast(`📥 ${datosFiltrados.length} registros exportados`, 'exito');
-});
 
 // ═══════════════════════════════════════════════════════════════
 // APLICAR FILTROS
@@ -518,14 +331,10 @@ function aplicarFiltros() {
   const ff = document.getElementById('fechaFin').valueAsDate;
   
   let datos = datosOriginales.filter(d => {
-    if (fi && ff && d.fecha_aviso) {
-      const parts = d.fecha_aviso.split('/').map(Number);
-      if (parts.length === 3) {
-        const fecha = new Date(parts[2], parts[1]-1, parts[0]);
-        if (fecha < fi || fecha > ff) return false;
-      }
-    }
-    return true;
+    const fecha = parseFecha(d.fecha_aviso);
+    if (!fecha) return false;
+    if (!fi || !ff) return true;
+    return fecha >= fi && fecha <= ff;
   });
   
   // Aplicar exclusiones
@@ -542,12 +351,6 @@ function aplicarFiltros() {
     if (k.startsWith('_')) continue;
     if (!camposDirectos.includes(k)) continue;
     datos = datos.filter(d => d[k] && d[k].toString().trim().toUpperCase() === filtrosActivos[k].toString().trim().toUpperCase());
-  }
-  
-  // Filtro de búsqueda de descripción
-  const buscarDesc = document.getElementById('buscarDescripcion').value.trim().toUpperCase();
-  if (buscarDesc) {
-    datos = datos.filter(d => (d.descripcion_averia || '').toUpperCase().includes(buscarDesc));
   }
   
   // Filtro de tipo orden por etiqueta
@@ -595,18 +398,190 @@ function aplicarFiltros() {
   }
   
   datosFiltrados = datos;
-  
-  if (tablaDT) {
-    tablaDT.clear();
-    tablaDT.rows.add(datos);
-    tablaDT.draw();
-  }
-  
-  document.getElementById('totalRegistros').textContent = datos.length.toLocaleString('es-ES');
+  actualizarStats(datos);
+  actualizarGraficos(datos);
   renderTags();
 }
 
+function actualizarStats(datos) {
+  document.getElementById('statTotal').textContent = datos.length.toLocaleString('es-ES');
+  
+  const vehiculosUnicos = new Set(datos.map(d => d.vhlo).filter(v => v && v !== '****')).size;
+  document.getElementById('statVehiculos').textContent = vehiculosUnicos.toLocaleString('es-ES');
+  
+  const familiasUnicas = new Set(datos.map(d => d.familia_averia).filter(f => f && f !== '')).size;
+  document.getElementById('statFamilias').textContent = familiasUnicas.toLocaleString('es-ES');
+  
+  const fechas = new Set(datos.map(d => d.fecha_aviso).filter(f => f)).size;
+  const promedio = fechas ? (datos.length / fechas).toFixed(1) : '0';
+  document.getElementById('statPromedio').textContent = promedio;
+}
+
 // ═══════════════════════════════════════════════════════════════
+// ACTUALIZAR GRÁFICOS
+// ══════════════════════════════════════════════════════════════
+function actualizarGraficos(datos) {
+  // Gráfico Familia Avería
+  if (charts.familia) charts.familia.destroy();
+  const ctxFamilia = document.getElementById('chartFamilia').getContext('2d');
+  const cntF = {};
+  datos.forEach(d => { const v = d.familia_averia; if (v && v !== '') cntF[v] = (cntF[v] || 0) + 1; });
+  const sortedF = Object.entries(cntF).sort((a, b) => b[1] - a[1]);
+  charts.familia = new Chart(ctxFamilia, {
+    type: 'doughnut',
+    data: {
+      labels: sortedF.map(e => e[0]),
+      datasets: [{ data: sortedF.map(e => e[1]), backgroundColor: genColores(sortedF.length) }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { color: getLegendColor(), font: { size: 11 } } } }
+    }
+  });
+  
+  // Gráfico Top 20 Vehículos
+  if (charts.vehiculo) charts.vehiculo.destroy();
+  const ctxVehiculo = document.getElementById('chartVehiculo').getContext('2d');
+  const cntV = {};
+  datos.forEach(d => { const v = d.vhlo; if (v && v !== '****') cntV[v] = (cntV[v] || 0) + 1; });
+  const sortedV = Object.entries(cntV).sort((a, b) => b[1] - a[1]).slice(0, 20);
+  charts.vehiculo = new Chart(ctxVehiculo, {
+    type: 'bar',
+    data: {
+      labels: sortedV.map(e => e[0]),
+      datasets: [{ data: sortedV.map(e => e[1]), backgroundColor: '#00d4aa' }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: getLegendColor(), font: { size: 10 } }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } },
+        y: { ticks: { color: getLegendColor() }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } }
+      }
+    }
+  });
+  
+  // Gráfico Evolución Mensual
+  if (charts.evolucion) charts.evolucion.destroy();
+  const ctxEvolucion = document.getElementById('chartEvolucion').getContext('2d');
+  const evol = {};
+  datos.forEach(d => {
+    const fecha = parseFecha(d.fecha_aviso);
+    if (!fecha) return;
+    const mes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+    if (!evol[mes]) evol[mes] = {};
+    const fam = d.familia_averia;
+    if (fam && fam !== '') evol[mes][fam] = (evol[mes][fam] || 0) + 1;
+  });
+  const lEv = Object.keys(evol).sort();
+  const fams = [...new Set(datos.map(d => d.familia_averia).filter(f => f && f !== ''))];
+  const cEv = genColores(fams.length);
+  charts.evolucion = new Chart(ctxEvolucion, {
+    type: 'line',
+    data: {
+      labels: lEv,
+      datasets: fams.map((fam, i) => ({
+        label: fam,
+        data: lEv.map(l => evol[l][fam] || 0),
+        borderColor: cEv[i],
+        backgroundColor: cEv[i] + '22',
+        fill: true,
+        tension: 0.3
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { color: getLegendColor(), font: { size: 10 } } } },
+      scales: {
+        x: { ticks: { color: getLegendColor(), font: { size: 10 } }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } },
+        y: { ticks: { color: getLegendColor() }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } }
+      }
+    }
+  });
+  
+  // Gráfico Top 30 Descripciones
+  if (charts.descripcion) charts.descripcion.destroy();
+  const ctxDescripcion = document.getElementById('chartDescripcion').getContext('2d');
+  const cntD = {};
+  datos.forEach(d => { const v = getDescripcion(d); if (v && v !== '') cntD[v] = (cntD[v] || 0) + 1; });
+  const sortedD = Object.entries(cntD).sort((a, b) => b[1] - a[1]).slice(0, 30);
+  charts.descripcion = new Chart(ctxDescripcion, {
+    type: 'bar',
+    data: {
+      labels: sortedD.map(e => e[0]),
+      datasets: [{ data: sortedD.map(e => e[1]), backgroundColor: '#7c6fe0' }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: getLegendColor() }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } },
+        y: { ticks: { color: getLegendColor(), font: { size: 10 } }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } }
+      }
+    }
+  });
+  
+  // Gráfico Carga Lateral
+  if (charts.cargaLateral) charts.cargaLateral.destroy();
+  const ctxCargaLateral = document.getElementById('chartCargaLateral').getContext('2d');
+  const datosLateral = datos.filter(d => d.familia && d.familia.toUpperCase().includes('CARGA LATERAL'));
+  const cntL = {};
+  datosLateral.forEach(d => {
+    const sub = getSubfamiliaLateral(d.vhlo);
+    if (sub) cntL[sub] = (cntL[sub] || 0) + 1;
+  });
+  const sortedL = Object.entries(cntL).sort((a, b) => b[1] - a[1]);
+  charts.cargaLateral = new Chart(ctxCargaLateral, {
+    type: 'bar',
+    data: {
+      labels: sortedL.map(e => e[0]),
+      datasets: [{ data: sortedL.map(e => e[1]), backgroundColor: genColores(sortedL.length), borderColor: modoOscuro ? '#0f0f1a' : '#f0f4ff', borderWidth: 1 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: getLegendColor(), font: { size: 10 } }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } },
+        y: { ticks: { color: getLegendColor() }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } }
+      }
+    }
+  });
+  
+  // Gráfico Carga Trasera
+  if (charts.cargaTrasera) charts.cargaTrasera.destroy();
+  const ctxCargaTrasera = document.getElementById('chartCargaTrasera').getContext('2d');
+  const datosTrasera = datos.filter(d => d.familia && d.familia.toUpperCase().includes('CARGA TRASERA'));
+  const cntT = {};
+  datosTrasera.forEach(d => {
+    const sub = getSubfamiliaTrasera(d.vhlo, d.familia);
+    if (sub) cntT[sub] = (cntT[sub] || 0) + 1;
+  });
+  const sortedT = Object.entries(cntT).sort((a, b) => b[1] - a[1]);
+  charts.cargaTrasera = new Chart(ctxCargaTrasera, {
+    type: 'bar',
+    data: {
+      labels: sortedT.map(e => e[0]),
+      datasets: [{ data: sortedT.map(e => e[1]), backgroundColor: genColores(sortedT.length), borderColor: modoOscuro ? '#0f0f1a' : '#f0f4ff', borderWidth: 1 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: getLegendColor(), font: { size: 10 } }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } },
+        y: { ticks: { color: getLegendColor() }, grid: { color: modoOscuro ? '#333' : '#e0e0e0' } }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
 // FILTROS POR CATEGORÍA
 // ═══════════════════════════════════════════════════════════════
 document.querySelectorAll('.btn-filtro[data-campo]').forEach(btn => {
@@ -679,7 +654,6 @@ function abrirMenuFiltro(campo, anchorEl) {
     const ex = new Set();
     menu.querySelectorAll('input').forEach(cb => { if (!cb.checked) ex.add(cb.value); });
     exclusiones[campo] = ex;
-    pushHistorial();
     renderTags();
     aplicarFiltros();
     cerrarMenus();
@@ -716,7 +690,7 @@ function abrirMenuRecurrencia(anchorEl) {
   const opciones = [
     { valor: '', texto: '🔄 Todos (sin filtro)' },
     { valor: 'unicos', texto: '✅ Únicos (1 avería)' },
-    { valor: 'reincidentes', texto: '️ Reincidentes (≥2 averías)' }
+    { valor: 'reincidentes', texto: '⚠️ Reincidentes (≥2 averías)' }
   ];
   
   opciones.forEach(op => {
@@ -743,7 +717,6 @@ function abrirMenuRecurrencia(anchorEl) {
     const selected = menu.querySelector('input[name="recurrencia"]:checked');
     if (selected && selected.value) filtrosActivos['_REINCIDENCIA'] = selected.value;
     else delete filtrosActivos['_REINCIDENCIA'];
-    pushHistorial();
     renderTags();
     aplicarFiltros();
     cerrarMenus();
@@ -779,7 +752,7 @@ function abrirMenuSubfamiliaTrasera(anchorEl) {
   rbAll.value = '';
   rbAll.checked = !filtrosActivos['_SUBFAMILIA_TRASERA'];
   const spAll = document.createElement('span');
-  spAll.textContent = '🔄 Todas';
+  spAll.textContent = ' Todas';
   rowAll.appendChild(rbAll);
   rowAll.appendChild(spAll);
   lista.appendChild(rowAll);
@@ -808,7 +781,6 @@ function abrirMenuSubfamiliaTrasera(anchorEl) {
     const selected = menu.querySelector('input[name="subf_trasera"]:checked');
     if (selected && selected.value) filtrosActivos['_SUBFAMILIA_TRASERA'] = selected.value;
     else delete filtrosActivos['_SUBFAMILIA_TRASERA'];
-    pushHistorial();
     renderTags();
     aplicarFiltros();
     cerrarMenus();
@@ -844,7 +816,7 @@ function abrirMenuSubfamiliaLateral(anchorEl) {
   rbAll.value = '';
   rbAll.checked = !filtrosActivos['_SUBFAMILIA_LATERAL'];
   const spAll = document.createElement('span');
-  spAll.textContent = '🔄 Todas';
+  spAll.textContent = ' Todas';
   rowAll.appendChild(rbAll);
   rowAll.appendChild(spAll);
   lista.appendChild(rowAll);
@@ -873,7 +845,6 @@ function abrirMenuSubfamiliaLateral(anchorEl) {
     const selected = menu.querySelector('input[name="subf_lateral"]:checked');
     if (selected && selected.value) filtrosActivos['_SUBFAMILIA_LATERAL'] = selected.value;
     else delete filtrosActivos['_SUBFAMILIA_LATERAL'];
-    pushHistorial();
     renderTags();
     aplicarFiltros();
     cerrarMenus();
@@ -899,8 +870,6 @@ function posicionarMenu(menu, anchorEl) {
 function cerrarMenus() {
   const m = document.getElementById('menuExcl');
   if (m) m.remove();
-  const m2 = document.getElementById('menuColumnas');
-  if (m2) m2.remove();
 }
 
 function cerrarAlFuera(e) {
@@ -911,7 +880,7 @@ function cerrarAlFuera(e) {
 
 // ═══════════════════════════════════════════════════════════════
 // TAGS DE FILTROS ACTIVOS
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 function renderTags() {
   const cont = document.getElementById('filtrosActivos');
   cont.innerHTML = '';
@@ -931,7 +900,6 @@ function renderTags() {
     t.textContent = `${nombre}: ${v} ✕`;
     t.onclick = () => {
       delete filtrosActivos[k];
-      pushHistorial();
       renderTags();
       aplicarFiltros();
     };
@@ -946,143 +914,51 @@ function renderTags() {
     t.title = [...set].join(', ');
     t.onclick = () => {
       exclusiones[campo] = new Set();
-      pushHistorial();
       renderTags();
       aplicarFiltros();
     };
     cont.appendChild(t);
   });
-  
-  const buscarDesc = document.getElementById('buscarDescripcion').value.trim();
-  if (buscarDesc) {
-    const t = document.createElement('span');
-    t.className = 'filtro-tag';
-    t.textContent = `🔍 Descripción: "${buscarDesc}" ✕`;
-    t.onclick = () => {
-      document.getElementById('buscarDescripcion').value = '';
-      aplicarFiltros();
-    };
-    cont.appendChild(t);
-  }
 }
-
-// ═══════════════════════════════════════════════════════════════
-// HISTORIAL ATRÁS/ADELANTE
-// ══════════════════════════════════════════════════════════════
-function pushHistorial() {
-  historial = historial.slice(0, historialIdx + 1);
-  historial.push({
-    filtrosActivos: JSON.parse(JSON.stringify(filtrosActivos)),
-    exclusiones: Object.fromEntries(Object.entries(exclusiones).map(([k, v]) => [k, [...v]]))
-  });
-  historialIdx = historial.length - 1;
-  actualizarBotones();
-}
-
-function actualizarBotones() {
-  document.getElementById('btnAtras').disabled = historialIdx <= 0;
-  document.getElementById('btnAdelante').disabled = historialIdx >= historial.length - 1;
-}
-
-document.getElementById('btnAtras').addEventListener('click', () => {
-  if (historialIdx > 0) {
-    historialIdx--;
-    const estado = historial[historialIdx];
-    filtrosActivos = JSON.parse(JSON.stringify(estado.filtrosActivos));
-    exclusiones = {};
-    for (const k in estado.exclusiones) exclusiones[k] = new Set(estado.exclusiones[k]);
-    renderTags();
-    aplicarFiltros();
-    actualizarBotones();
-  }
-});
-
-document.getElementById('btnAdelante').addEventListener('click', () => {
-  if (historialIdx < historial.length - 1) {
-    historialIdx++;
-    const estado = historial[historialIdx];
-    filtrosActivos = JSON.parse(JSON.stringify(estado.filtrosActivos));
-    exclusiones = {};
-    for (const k in estado.exclusiones) exclusiones[k] = new Set(estado.exclusiones[k]);
-    renderTags();
-    aplicarFiltros();
-    actualizarBotones();
-  }
-});
 
 // ═══════════════════════════════════════════════════════════════
 // CONTROLES
 // ═══════════════════════════════════════════════════════════════
-document.getElementById('fechaInicio').addEventListener('change', aplicarFiltros);
-document.getElementById('fechaFin').addEventListener('change', aplicarFiltros);
-
 document.getElementById('btnLimpiar').addEventListener('click', () => {
   filtrosActivos = {};
   exclusiones = {};
-  document.getElementById('buscarDescripcion').value = '';
-  pushHistorial();
   renderTags();
   aplicarFiltros();
 });
 
 document.getElementById('btnRecargar').addEventListener('click', cargarDatos);
 
-document.getElementById('buscarDescripcion').addEventListener('input', () => {
-  aplicarFiltros();
-});
-
-// ═══════════════════════════════════════════════════════════════
-// MENÚ DE COLUMNAS
-// ═══════════════════════════════════════════════════════════════
-const btnColumnas = document.getElementById('btnColumnas');
-const colMenu = document.getElementById('colMenu');
-
-btnColumnas.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (colMenu.style.display === 'block') {
-    colMenu.style.display = 'none';
-    return;
-  }
-  
-  colMenu.innerHTML = '';
-  tablaDT.columns().every(function(i) {
-    const title = this.header().textContent.trim();
-    if (!title) return;
-    const visible = this.visible();
-    const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" ${visible ? 'checked' : ''} data-col="${i}"> ${title}`;
-    label.querySelector('input').addEventListener('change', function() {
-      tablaDT.column(this.dataset.col).visible(this.checked);
-    });
-    colMenu.appendChild(label);
-  });
-  
-  const rect = btnColumnas.getBoundingClientRect();
-  colMenu.style.top = (rect.bottom + 8) + 'px';
-  colMenu.style.left = rect.left + 'px';
-  colMenu.style.display = 'block';
-});
-
-document.addEventListener('click', (e) => {
-  if (!colMenu.contains(e.target) && e.target !== btnColumnas) {
-    colMenu.style.display = 'none';
-  }
-});
-
 // ═══════════════════════════════════════════════════════════════
 // MODO CLARO/OSCURO
 // ═══════════════════════════════════════════════════════════════
-document.getElementById('toggleModo').addEventListener('click', () => {
+document.getElementById('btnModo').addEventListener('click', () => {
   modoOscuro = !modoOscuro;
   document.body.classList.toggle('light-mode', !modoOscuro);
-  document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : ' Modo oscuro';
+  document.getElementById('btnModo').textContent = modoOscuro ? ' Modo claro' : '🌙 Modo oscuro';
   localStorage.setItem('ct_modo', modoOscuro ? 'dark' : 'light');
+  
+  // Actualizar gráficos
+  Object.values(charts).forEach(c => {
+    if (c) {
+      if (c.options.plugins.legend) c.options.plugins.legend.labels.color = getLegendColor();
+      if (c.options.scales) {
+        if (c.options.scales.x) c.options.scales.x.ticks.color = getLegendColor();
+        if (c.options.scales.y) c.options.scales.y.ticks.color = getLegendColor();
+      }
+      c.update();
+    }
+  });
 });
-document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
 
-// ══════════════════════════════════════════════════════════════
-// CARGAR ESTADO GUARDADO
 // ═══════════════════════════════════════════════════════════════
+// CARGAR ESTADO GUARDADO
+// ══════════════════════════════════════════════════════════════
 function cargarEstado() {
   const estado = localStorage.getItem('ct_estado');
   if (estado) {
@@ -1100,7 +976,6 @@ function cargarEstado() {
 // ═══════════════════════════════════════════════════════════════
 // INICIALIZACIÓN
 // ═══════════════════════════════════════════════════════════════
-pushHistorial();
 cargarDatos();
 </script>
 </body>

@@ -44,26 +44,15 @@
   .excl-title { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
   .excl-barra { display: flex; gap: 8px; margin-bottom: 12px; }
   .excl-barra button { flex: 1; font-size: 11px; padding: 6px 0; }
-  
-  /* ✅ NUEVO: Buscador dentro del desplegable */
   .excl-search {
-    width: 100%;
-    background: var(--input-bg, var(--bg3));
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 7px 10px;
-    margin-bottom: 10px;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    box-sizing: border-box;
-    transition: border-color 0.2s;
+    width: 100%; background: var(--input-bg, var(--bg3)); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px;
+    margin-bottom: 10px; font-size: 12px; font-family: 'Inter', sans-serif; box-sizing: border-box;
   }
-  .excl-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(20,184,166,0.15); }
+  .excl-search:focus { outline: none; border-color: var(--accent); }
   .excl-search::placeholder { color: var(--text-muted); font-size: 11px; }
-  .excl-no-results { text-align: center; color: var(--text-muted); font-size: 11px; padding: 12px 4px; font-style: italic; display: none; }
   .excl-row.hidden-by-search { display: none; }
-  
+  .excl-no-results { text-align: center; color: var(--text-muted); font-size: 11px; padding: 12px 4px; font-style: italic; display: none; }
   .excl-lista { max-height: 250px; overflow-y: auto; margin-bottom: 12px; }
   .excl-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; border-radius: 6px; color: var(--text); transition: background 0.2s; }
   .excl-row:hover { background: var(--bg3); }
@@ -77,6 +66,31 @@
   .filtro-tag { font-size: 11px; background: var(--accent); color: var(--bg); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-weight: 500; transition: opacity 0.2s; }
   .filtro-tag:hover { opacity: 0.8; }
   .filtro-tag.filtro-excluido { background: var(--accent4) !important; color: #ffffff !important; }
+  
+  /* ✅ SELECCIÓN MÚLTIPLE */
+  .fila-seleccionada td { background: rgba(20, 184, 166, 0.15) !important; }
+  .fila-seleccionada td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+  .checkbox-seleccion { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .barra-seleccion {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--bg2); border: 2px solid var(--accent); border-radius: 12px;
+    padding: 12px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    display: none; align-items: center; gap: 16px; z-index: 9999;
+    font-family: 'Inter', sans-serif;
+  }
+  .barra-seleccion.visible { display: flex; }
+  .barra-seleccion .contador-sel { color: var(--text); font-weight: 600; font-size: 14px; }
+  .barra-seleccion .contador-sel strong { color: var(--accent); font-size: 1.3em; font-family: 'Rajdhani', sans-serif; }
+  .btn-eliminar-sel {
+    background: var(--accent4); color: white; border: none; padding: 8px 16px;
+    border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;
+  }
+  .btn-eliminar-sel:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-cancelar-sel {
+    background: transparent; color: var(--text-muted); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px;
+  }
+  .btn-cancelar-sel:hover { background: var(--bg3); }
 </style>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -110,7 +124,6 @@
     </div>
   </div>
 
-  <!-- Panel de filtros por categoría -->
   <div class="panel-filtros">
     <div class="filtros-grid">
       <button class="btn-filtro" data-campo="familia">🚛 Familia Vehículo</button>
@@ -135,13 +148,14 @@
   <div id="filtrosActivos" class="filtros-activos"></div>
 
   <div class="ayuda">
-    💡 <strong>Clic en cualquier celda</strong> para editarla · <strong>Enter</strong> para guardar · <strong>Esc</strong> para cancelar · Usa los botones de arriba para filtrar por categoría
+    💡 <strong>Clic en cualquier celda</strong> para editarla · <strong>Enter</strong> para guardar · <strong>Esc</strong> para cancelar · <strong>Shift + Click</strong> en checkbox para seleccionar rango
   </div>
 
   <div style="background:var(--chart-bg); border:1px solid var(--chart-border); border-radius:12px; padding:20px; box-shadow:var(--shadow);">
     <table id="tablaIncidencias" class="display" style="width:100%">
       <thead>
         <tr>
+          <th style="width:40px;"><input type="checkbox" class="checkbox-seleccion" id="chkSeleccionarTodo" title="Seleccionar todo"></th>
           <th>ID</th>
           <th>Fecha Aviso</th>
           <th>Hora</th>
@@ -167,7 +181,13 @@
 <!-- Menú de columnas -->
 <div class="col-menu" id="colMenu"></div>
 
-<!-- ✅ Cargar supabase-config.js para usar TABLA_PRINCIPAL -->
+<!-- ✅ Barra flotante de selección múltiple -->
+<div class="barra-seleccion" id="barraSeleccion">
+  <span class="contador-sel"><strong id="contadorSel">0</strong> filas seleccionadas</span>
+  <button class="btn-eliminar-sel" onclick="eliminarSeleccionadas()">🗑️ Eliminar seleccionadas</button>
+  <button class="btn-cancelar-sel" onclick="cancelarSeleccion()">✕ Cancelar</button>
+</div>
+
 <script src="supabase-config.js"></script>
 
 <script>
@@ -179,6 +199,10 @@ let filtrosActivos = {};
 let exclusiones = {};
 let historial = [];
 let historialIdx = -1;
+
+// ✅ SELECCIÓN MÚLTIPLE
+let idsSeleccionados = new Set();
+let ultimaFilaClick = null;
 
 const MAPA_TIPO_ORDEN = { 'L02': 'Accidente', 'L05': 'Golpe / Mal Uso' };
 const ETIQUETA_AVERIA = 'Avería';
@@ -236,7 +260,7 @@ function toast(texto, tipo = 'info') {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ✅ CARGAR DATOS DESDE TABLA_PRINCIPAL (con paginación)
+// CARGAR DATOS
 // ═══════════════════════════════════════════════════════════════
 async function cargarDatos() {
   try {
@@ -261,7 +285,6 @@ async function cargarDatos() {
       desde += limite;
     }
     
-    // Normalizar datos
     datosOriginales = todosLosDatos.map(d => ({
       id: d.id,
       fecha_aviso: d.fecha_aviso || '',
@@ -282,6 +305,7 @@ async function cargarDatos() {
     if (!tablaDT) inicializarTabla();
     cargarEstado();
     aplicarFiltros();
+    inicializarFechas();
     
     toast(`✅ ${todosLosDatos.length} incidencias cargadas desde ${TABLA_PRINCIPAL}`, 'exito');
     
@@ -291,6 +315,29 @@ async function cargarDatos() {
   }
 }
 
+function inicializarFechas() {
+  if (datosOriginales.length === 0) return;
+  
+  const fechas = datosOriginales
+    .map(d => {
+      if (!d.fecha_aviso) return null;
+      const parts = d.fecha_aviso.split('/').map(Number);
+      if (parts.length === 3 && !parts.some(isNaN)) {
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      }
+      return null;
+    })
+    .filter(f => f && !isNaN(f));
+  
+  if (fechas.length === 0) return;
+  
+  const minFecha = new Date(Math.min(...fechas));
+  const maxFecha = new Date(Math.max(...fechas));
+  
+  document.getElementById('fechaInicio').valueAsDate = minFecha;
+  document.getElementById('fechaFin').valueAsDate = maxFecha;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // INICIALIZAR TABLA
 // ═══════════════════════════════════════════════════════════════
@@ -298,6 +345,11 @@ function inicializarTabla() {
   tablaDT = $('#tablaIncidencias').DataTable({
     data: [],
     columns: [
+      { title: '', data: null, width: '40px', orderable: false, searchable: false,
+        render: function(d, t, row) {
+          return `<input type="checkbox" class="checkbox-seleccion chk-fila" data-id="${row.id}">`;
+        }
+      },
       { title: 'ID', data: 'id', width: '60px' },
       { title: 'Fecha Aviso', data: 'fecha_aviso', width: '100px' },
       { title: 'Hora', data: 'hora', width: '70px' },
@@ -331,7 +383,7 @@ function inicializarTabla() {
     scrollX: true,
     pageLength: 25,
     lengthChange: true,
-    order: [[0, 'desc']],
+    order: [[1, 'desc']],
     dom: '<"top"lf>rt<"bottom"ip><"clear">',
     language: {
       search: 'Buscar:',
@@ -416,7 +468,7 @@ $('#tablaIncidencias').on('draw.dt', function() {
 // ═══════════════════════════════════════════════════════════════
 // EDICIÓN DE CELDAS
 // ═══════════════════════════════════════════════════════════════
-$('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)', function() {
+$('#tablaIncidencias tbody').on('click', 'td.celda-editable', function() {
   const celda = $(this);
   if (celda.find('input').length > 0) return;
   
@@ -426,9 +478,9 @@ $('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)'
   const rowData = row.data();
   const id = rowData.id;
   
-  const campos = ['id', 'fecha_aviso', 'hora', 'turno', 'vhlo', 'familia', 'conductor', 'familia_averia', 'deficiencias', 'descripcion_averia', 'origen_aviso', 'tipo_orden', 'n_aviso', 'foto'];
+  const campos = ['_', 'id', 'fecha_aviso', 'hora', 'turno', 'vhlo', 'familia', 'conductor', 'familia_averia', 'deficiencias', 'descripcion_averia', 'origen_aviso', 'tipo_orden', 'n_aviso', 'foto'];
   const campo = campos[colIdx];
-  if (!campo) return;
+  if (!campo || campo === '_') return;
   
   const valorActual = rowData[campo] || '';
   const input = $(`<input type="text" class="edit-input" value="${valorActual.replace(/"/g, '&quot;')}">`);
@@ -466,7 +518,7 @@ $('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)'
 });
 
 // ═══════════════════════════════════════════════════════════════
-// ELIMINAR
+// ELIMINAR INDIVIDUAL
 // ═══════════════════════════════════════════════════════════════
 $('#tablaIncidencias tbody').on('click', '.btn-eliminar', async function(e) {
   e.stopPropagation();
@@ -544,14 +596,12 @@ function aplicarFiltros() {
     return true;
   });
   
-  // Aplicar exclusiones
   for (const campo in exclusiones) {
     if (exclusiones[campo].size) {
       datos = datos.filter(d => !exclusiones[campo].has((d[campo] || '').toString().trim().toUpperCase()));
     }
   }
   
-  // Aplicar filtros activos
   const camposDirectos = ['familia_averia', 'familia', 'origen_aviso', 'turno', 'vhlo', 'tipo_orden', 'conductor', 'deficiencias'];
   for (const k in filtrosActivos) {
     if (!filtrosActivos[k]) continue;
@@ -560,13 +610,11 @@ function aplicarFiltros() {
     datos = datos.filter(d => d[k] && d[k].toString().trim().toUpperCase() === filtrosActivos[k].toString().trim().toUpperCase());
   }
   
-  // Filtro de búsqueda de descripción
   const buscarDesc = document.getElementById('buscarDescripcion').value.trim().toUpperCase();
   if (buscarDesc) {
     datos = datos.filter(d => (d.descripcion_averia || '').toUpperCase().includes(buscarDesc));
   }
   
-  // Filtro de tipo orden por etiqueta
   if (filtrosActivos['_TIPO_ORDEN_LABEL']) {
     const etiqueta = filtrosActivos['_TIPO_ORDEN_LABEL'];
     const mapping = getCodigosParaEtiqueta(etiqueta);
@@ -580,7 +628,6 @@ function aplicarFiltros() {
     }
   }
   
-  // Filtro de recurrencia
   if (filtrosActivos['_REINCIDENCIA']) {
     const tipo = filtrosActivos['_REINCIDENCIA'];
     const vhCountBase = {};
@@ -598,13 +645,11 @@ function aplicarFiltros() {
     }
   }
   
-  // Filtro de subfamilia trasera
   if (filtrosActivos['_SUBFAMILIA_TRASERA']) {
     const subFam = filtrosActivos['_SUBFAMILIA_TRASERA'];
     datos = datos.filter(d => getSubfamiliaTrasera(d.vhlo, d.familia) === subFam);
   }
   
-  // Filtro de subfamilia lateral
   if (filtrosActivos['_SUBFAMILIA_LATERAL']) {
     const subFam = filtrosActivos['_SUBFAMILIA_LATERAL'];
     datos = datos.filter(d => getSubfamiliaLateral(d.vhlo) === subFam);
@@ -643,9 +688,6 @@ document.querySelectorAll('.btn-filtro[data-campo-especial]').forEach(btn => {
   });
 });
 
-// ═══════════════════════════════════════════════════════════════
-// ✅ MENÚ DE FILTRO CON BUSCADOR INTEGRADO
-// ═══════════════════════════════════════════════════════════════
 function abrirMenuFiltro(campo, anchorEl) {
   cerrarMenus();
   const valores = [...new Set(datosOriginales.map(d => (d[campo] || '').toString().trim().toUpperCase()).filter(v => v && v !== '' && v !== '****'))].sort();
@@ -671,7 +713,6 @@ function abrirMenuFiltro(campo, anchorEl) {
   bar.appendChild(bN);
   menu.appendChild(bar);
   
-  // ✅ NUEVO: Buscador dentro del desplegable
   const searchInput = document.createElement('input');
   searchInput.type = 'text';
   searchInput.className = 'excl-search';
@@ -699,7 +740,6 @@ function abrirMenuFiltro(campo, anchorEl) {
   
   menu.appendChild(lista);
   
-  // ✅ Mensaje "sin resultados"
   const noResults = document.createElement('div');
   noResults.className = 'excl-no-results';
   noResults.textContent = '🔍 Sin resultados';
@@ -721,7 +761,6 @@ function abrirMenuFiltro(campo, anchorEl) {
   
   document.body.appendChild(menu);
   
-  // ✅ Lógica del buscador: filtra las filas en tiempo real
   searchInput.addEventListener('input', () => {
     const q = searchInput.value.trim().toLowerCase();
     let visibles = 0;
@@ -737,7 +776,6 @@ function abrirMenuFiltro(campo, anchorEl) {
     noResults.style.display = visibles === 0 ? 'block' : 'none';
   });
   
-  // Enfocar automáticamente el buscador
   setTimeout(() => searchInput.focus(), 50);
   
   const r = anchorEl.getBoundingClientRect();
@@ -820,7 +858,6 @@ function abrirMenuSubfamiliaTrasera(anchorEl) {
   tit.textContent = 'Filtrar: Subfamilia Trasera';
   menu.appendChild(tit);
   
-  // ✅ Buscador también aquí
   const searchInput = document.createElement('input');
   searchInput.type = 'text';
   searchInput.className = 'excl-search';
@@ -861,7 +898,6 @@ function abrirMenuSubfamiliaTrasera(anchorEl) {
   
   menu.appendChild(lista);
   
-  // ✅ Lógica del buscador
   searchInput.addEventListener('input', () => {
     const q = searchInput.value.trim().toLowerCase();
     lista.querySelectorAll('.excl-row').forEach(row => {
@@ -902,7 +938,6 @@ function abrirMenuSubfamiliaLateral(anchorEl) {
   tit.textContent = 'Filtrar: Subfamilia Lateral';
   menu.appendChild(tit);
   
-  // ✅ Buscador también aquí
   const searchInput = document.createElement('input');
   searchInput.type = 'text';
   searchInput.className = 'excl-search';
@@ -943,7 +978,6 @@ function abrirMenuSubfamiliaLateral(anchorEl) {
   
   menu.appendChild(lista);
   
-  // ✅ Lógica del buscador
   searchInput.addEventListener('input', () => {
     const q = searchInput.value.trim().toLowerCase();
     lista.querySelectorAll('.excl-row').forEach(row => {
@@ -997,7 +1031,7 @@ function cerrarAlFuera(e) {
 
 // ═══════════════════════════════════════════════════════════════
 // TAGS DE FILTROS ACTIVOS
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 function renderTags() {
   const cont = document.getElementById('filtrosActivos');
   cont.innerHTML = '';
@@ -1054,7 +1088,7 @@ function renderTags() {
 
 // ═══════════════════════════════════════════════════════════════
 // HISTORIAL ATRÁS/ADELANTE
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 function pushHistorial() {
   historial = historial.slice(0, historialIdx + 1);
   historial.push({
@@ -1156,6 +1190,111 @@ document.addEventListener('click', (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+// ✅ SELECCIÓN MÚLTIPLE
+// ═══════════════════════════════════════════════════════════════
+$('#tablaIncidencias tbody').on('click', '.chk-fila', function(e) {
+  e.stopPropagation();
+  const id = parseInt($(this).data('id'));
+  const fila = $(this).closest('tr');
+  
+  if (e.shiftKey && ultimaFilaClick !== null) {
+    const filas = $('#tablaIncidencias tbody tr').toArray();
+    const idxActual = filas.indexOf(fila[0]);
+    const idxUltima = filas.indexOf(ultimaFilaClick);
+    const inicio = Math.min(idxActual, idxUltima);
+    const fin = Math.max(idxActual, idxUltima);
+    
+    for (let i = inicio; i <= fin; i++) {
+      const chk = $(filas[i]).find('.chk-fila');
+      const idFila = parseInt(chk.data('id'));
+      chk.prop('checked', true);
+      idsSeleccionados.add(idFila);
+      $(filas[i]).addClass('fila-seleccionada');
+    }
+  } else {
+    if ($(this).is(':checked')) {
+      idsSeleccionados.add(id);
+      fila.addClass('fila-seleccionada');
+    } else {
+      idsSeleccionados.delete(id);
+      fila.removeClass('fila-seleccionada');
+    }
+  }
+  
+  ultimaFilaClick = fila[0];
+  actualizarBarraSeleccion();
+});
+
+$(document).on('change', '#chkSeleccionarTodo', function() {
+  const checked = $(this).is(':checked');
+  $('#tablaIncidencias tbody .chk-fila').each(function() {
+    const id = parseInt($(this).data('id'));
+    const fila = $(this).closest('tr');
+    $(this).prop('checked', checked);
+    if (checked) {
+      idsSeleccionados.add(id);
+      fila.addClass('fila-seleccionada');
+    } else {
+      idsSeleccionados.delete(id);
+      fila.removeClass('fila-seleccionada');
+    }
+  });
+  actualizarBarraSeleccion();
+});
+
+function actualizarBarraSeleccion() {
+  const barra = document.getElementById('barraSeleccion');
+  const contador = document.getElementById('contadorSel');
+  if (idsSeleccionados.size > 0) {
+    barra.classList.add('visible');
+    contador.textContent = idsSeleccionados.size;
+  } else {
+    barra.classList.remove('visible');
+  }
+  const totalFilas = $('#tablaIncidencias tbody .chk-fila').length;
+  $('#chkSeleccionarTodo').prop('checked', idsSeleccionados.size === totalFilas && totalFilas > 0);
+}
+
+function cancelarSeleccion() {
+  idsSeleccionados.clear();
+  $('#tablaIncidencias tbody .chk-fila').prop('checked', false);
+  $('#tablaIncidencias tbody tr').removeClass('fila-seleccionada');
+  $('#chkSeleccionarTodo').prop('checked', false);
+  actualizarBarraSeleccion();
+}
+
+async function eliminarSeleccionadas() {
+  if (idsSeleccionados.size === 0) return;
+  
+  const confirmacion = confirm(`¿Eliminar ${idsSeleccionados.size} incidencias seleccionadas?\n\nEsta acción no se puede deshacer.`);
+  if (!confirmacion) return;
+  
+  toast(`🔄 Eliminando ${idsSeleccionados.size} registros...`, 'info');
+  
+  let exitosos = 0;
+  let errores = 0;
+  
+  for (const id of idsSeleccionados) {
+    try {
+      await eliminarIncidencia(id);
+      exitosos++;
+    } catch (error) {
+      console.error(`Error eliminando ID ${id}:`, error);
+      errores++;
+    }
+  }
+  
+  if (errores === 0) {
+    toast(`✅ ${exitosos} incidencias eliminadas`, 'exito');
+  } else {
+    toast(`⚠️ ${exitosos} eliminadas, ${errores} con error`, 'error');
+  }
+  
+  cancelarSeleccion();
+  cargarDatos();
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MODO CLARO/OSCURO
 // ═══════════════════════════════════════════════════════════════
 document.getElementById('toggleModo').addEventListener('click', () => {
@@ -1166,7 +1305,7 @@ document.getElementById('toggleModo').addEventListener('click', () => {
 });
 document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
 
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 // CARGAR ESTADO GUARDADO
 // ═══════════════════════════════════════════════════════════════
 function cargarEstado() {
@@ -1184,36 +1323,10 @@ function cargarEstado() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ✅ NUEVO: INICIALIZAR FECHAS CON RANGO DE LA BD
-// ═══════════════════════════════════════════════════════════════
-function inicializarFechas() {
-  if (datosOriginales.length === 0) return;
-  
-  const fechas = datosOriginales
-    .map(d => {
-      if (!d.fecha_aviso) return null;
-      const parts = d.fecha_aviso.split('/').map(Number);
-      if (parts.length === 3 && !parts.some(isNaN)) {
-        return new Date(parts[2], parts[1] - 1, parts[0]);
-      }
-      return null;
-    })
-    .filter(f => f && !isNaN(f));
-  
-  if (fechas.length === 0) return;
-  
-  const minFecha = new Date(Math.min(...fechas));
-  const maxFecha = new Date(Math.max(...fechas));
-  
-  document.getElementById('fechaInicio').valueAsDate = minFecha;
-  document.getElementById('fechaFin').valueAsDate = maxFecha;
-}
-
-// ═══════════════════════════════════════════════════════════════
 // INICIALIZACIÓN
 // ═══════════════════════════════════════════════════════════════
 pushHistorial();
-cargarDatos().then(() => inicializarFechas());
+cargarDatos();
 </script>
 </body>
 </html>

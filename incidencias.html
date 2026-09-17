@@ -91,6 +91,43 @@
     padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px;
   }
   .btn-cancelar-sel:hover { background: var(--bg3); }
+  /* ✅ NUEVO: Botón editar selección */
+  .btn-editar-sel {
+    background: var(--accent3); color: white; border: none; padding: 8px 16px;
+    border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;
+  }
+  .btn-editar-sel:hover { opacity: 0.85; transform: translateY(-1px); }
+  
+  /* ✅ NUEVO: Modal de edición masiva */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99998;
+    display: none; align-items: center; justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-content {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+    width: 90%; max-width: 500px; padding: 24px; box-shadow: var(--shadow-lg);
+  }
+  .modal-content h3 { margin: 0 0 16px 0; color: var(--text); font-size: 1.2em; }
+  .modal-content label { display: block; margin-bottom: 8px; color: var(--text); font-size: 13px; font-weight: 500; }
+  .modal-content select, .modal-content input[type="text"] {
+    width: 100%; padding: 10px 12px; background: var(--input-bg); color: var(--input-text);
+    border: 1px solid var(--input-border); border-radius: 8px; font-size: 13px;
+    font-family: 'Inter', sans-serif; margin-bottom: 16px; box-sizing: border-box;
+  }
+  .modal-content select:focus, .modal-content input[type="text"]:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+  .modal-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--accent3); margin-bottom: 16px; }
+  .modal-info strong { color: var(--text); }
+  
+  /* ✅ NUEVO: Indicador visual de celdas en modo edición masiva */
+  td.celda-editable-masiva { position: relative; }
+  td.celda-editable-masiva::before {
+    content: '✏️'; position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; opacity: 0.5;
+  }
 </style>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -148,7 +185,7 @@
   <div id="filtrosActivos" class="filtros-activos"></div>
 
   <div class="ayuda">
-    💡 <strong>Clic en cualquier celda</strong> para editarla · <strong>Enter</strong> para guardar · <strong>Esc</strong> para cancelar · <strong>Shift + Click</strong> en checkbox para seleccionar rango
+    💡 <strong>Clic en cualquier celda</strong> para editarla · <strong>Enter</strong> para guardar · <strong>Esc</strong> para cancelar · <strong>Shift + Click</strong> en checkbox para seleccionar rango · ✏️ <strong>Selecciona varias filas y pulsa "Editar selección"</strong> para cambiar un campo en todas a la vez
   </div>
 
   <div style="background:var(--chart-bg); border:1px solid var(--chart-border); border-radius:12px; padding:20px; box-shadow:var(--shadow);">
@@ -184,8 +221,41 @@
 <!-- ✅ Barra flotante de selección múltiple -->
 <div class="barra-seleccion" id="barraSeleccion">
   <span class="contador-sel"><strong id="contadorSel">0</strong> filas seleccionadas</span>
-  <button class="btn-eliminar-sel" onclick="eliminarSeleccionadas()">🗑️ Eliminar seleccionadas</button>
+  <button class="btn-editar-sel" onclick="abrirModalEdicionMasiva()">✏️ Editar selección</button>
+  <button class="btn-eliminar-sel" onclick="eliminarSeleccionadas()">🗑️ Eliminar</button>
   <button class="btn-cancelar-sel" onclick="cancelarSeleccion()">✕ Cancelar</button>
+</div>
+
+<!-- ✅ NUEVO: Modal de edición masiva -->
+<div class="modal-overlay" id="modalEdicionMasiva">
+  <div class="modal-content">
+    <h3>✏️ Editar campo en filas seleccionadas</h3>
+    <div class="modal-info">
+      Se actualizará el campo <strong id="modalCampoNombre">-</strong> en <strong id="modalNumFilas">0</strong> filas seleccionadas.
+    </div>
+    <label for="selectCampo">Campo a modificar:</label>
+    <select id="selectCampo">
+      <option value="fecha_aviso">Fecha Aviso</option>
+      <option value="hora">Hora</option>
+      <option value="turno">Turno</option>
+      <option value="vhlo">VHLO</option>
+      <option value="familia">Familia</option>
+      <option value="conductor">Conductor</option>
+      <option value="familia_averia">Familia Avería</option>
+      <option value="deficiencias">Deficiencias</option>
+      <option value="descripcion_averia">Descripción Avería</option>
+      <option value="origen_aviso">Origen Aviso</option>
+      <option value="tipo_orden">Tipo Orden</option>
+      <option value="n_aviso">Nº Aviso</option>
+      <option value="foto">Foto</option>
+    </select>
+    <label for="inputValor">Nuevo valor:</label>
+    <input type="text" id="inputValor" placeholder="Escribe el nuevo valor...">
+    <div class="modal-actions">
+      <button class="btn-cancelar-sel" onclick="cerrarModalEdicion()">Cancelar</button>
+      <button class="btn-editar-sel" onclick="aplicarEdicionMasiva()">💾 Aplicar a todas</button>
+    </div>
+  </div>
 </div>
 
 <script src="supabase-config.js"></script>
@@ -307,7 +377,7 @@ async function cargarDatos() {
     aplicarFiltros();
     inicializarFechas();
     
-    toast(`✅ ${todosLosDatos.length} incidencias cargadas desde ${TABLA_PRINCIPAL}`, 'exito');
+    toast(`✅ ${todosLosDatos.length} incidencias cargadas`, 'exito');
     
   } catch (e) {
     console.error('Error cargando datos:', e);
@@ -466,9 +536,9 @@ $('#tablaIncidencias').on('draw.dt', function() {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// EDICIÓN DE CELDAS
+// ✅ EDICIÓN DE CELDAS (individual o masiva si hay selección)
 // ═══════════════════════════════════════════════════════════════
-$('#tablaIncidencias tbody').on('click', 'td.celda-editable', function() {
+$('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)', function(e) {
   const celda = $(this);
   if (celda.find('input').length > 0) return;
   
@@ -482,6 +552,23 @@ $('#tablaIncidencias tbody').on('click', 'td.celda-editable', function() {
   const campo = campos[colIdx];
   if (!campo || campo === '_') return;
   
+  // ✅ Si hay filas seleccionadas Y esta fila NO está seleccionada → preguntar si editar todas
+  if (idsSeleccionados.size > 0 && !idsSeleccionados.has(id)) {
+    if (confirm(`Hay ${idsSeleccionados.size} filas seleccionadas.\n\n¿Quieres editar el campo "${campo}" en TODAS las filas seleccionadas?\n\n(Si pulsas Cancelar, solo se editará esta celda)`)) {
+      abrirModalEdicionMasivaConCampo(campo);
+      return;
+    }
+  }
+  
+  // ✅ Si hay filas seleccionadas Y esta fila SÍ está seleccionada → editar masivo directamente
+  if (idsSeleccionados.size > 1 && idsSeleccionados.has(id)) {
+    if (confirm(`Esta fila está seleccionada (${idsSeleccionados.size} filas en total).\n\n¿Quieres editar el campo "${campo}" en TODAS las filas seleccionadas?\n\n(Si pulsas Cancelar, solo se editará esta celda)`)) {
+      abrirModalEdicionMasivaConCampo(campo);
+      return;
+    }
+  }
+  
+  // Edición individual normal
   const valorActual = rowData[campo] || '';
   const input = $(`<input type="text" class="edit-input" value="${valorActual.replace(/"/g, '&quot;')}">`);
   
@@ -515,6 +602,120 @@ $('#tablaIncidencias tbody').on('click', 'td.celda-editable', function() {
     if (e.key === 'Enter') { e.preventDefault(); input.off('blur'); guardar(); }
     else if (e.key === 'Escape') { input.off('blur'); celda.text(valorActual); }
   });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ NUEVO: MODAL DE EDICIÓN MASIVA
+// ═══════════════════════════════════════════════════════════════
+function abrirModalEdicionMasiva() {
+  if (idsSeleccionados.size === 0) {
+    toast('⚠️ No hay filas seleccionadas', 'error');
+    return;
+  }
+  document.getElementById('modalEdicionMasiva').classList.add('active');
+  document.getElementById('modalNumFilas').textContent = idsSeleccionados.size;
+  document.getElementById('selectCampo').value = 'turno'; // Campo por defecto
+  document.getElementById('inputValor').value = '';
+  document.getElementById('inputValor').focus();
+  actualizarNombreCampo();
+}
+
+function abrirModalEdicionMasivaConCampo(campo) {
+  if (idsSeleccionados.size === 0) {
+    toast('⚠️ No hay filas seleccionadas', 'error');
+    return;
+  }
+  document.getElementById('modalEdicionMasiva').classList.add('active');
+  document.getElementById('modalNumFilas').textContent = idsSeleccionados.size;
+  document.getElementById('selectCampo').value = campo;
+  document.getElementById('inputValor').value = '';
+  document.getElementById('inputValor').focus();
+  actualizarNombreCampo();
+}
+
+function cerrarModalEdicion() {
+  document.getElementById('modalEdicionMasiva').classList.remove('active');
+}
+
+// Actualizar nombre del campo seleccionado
+document.getElementById('selectCampo').addEventListener('change', actualizarNombreCampo);
+
+function actualizarNombreCampo() {
+  const select = document.getElementById('selectCampo');
+  const nombre = select.options[select.selectedIndex].text;
+  document.getElementById('modalCampoNombre').textContent = nombre;
+}
+
+// Enter en el input aplica la edición
+document.getElementById('inputValor').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    aplicarEdicionMasiva();
+  } else if (e.key === 'Escape') {
+    cerrarModalEdicion();
+  }
+});
+
+async function aplicarEdicionMasiva() {
+  const campo = document.getElementById('selectCampo').value;
+  const nuevoValor = document.getElementById('inputValor').value.trim();
+  const numFilas = idsSeleccionados.size;
+  
+  if (numFilas === 0) {
+    toast('⚠️ No hay filas seleccionadas', 'error');
+    return;
+  }
+  
+  if (nuevoValor === '') {
+    toast('⚠️ Escribe un valor', 'error');
+    return;
+  }
+  
+  // Confirmación si son muchas filas
+  if (numFilas > 5) {
+    if (!confirm(`¿Aplicar "${nuevoValor}" al campo "${campo}" en ${numFilas} filas?\n\nEsta acción no se puede deshacer.`)) {
+      return;
+    }
+  }
+  
+  cerrarModalEdicion();
+  toast(`🔄 Actualizando ${numFilas} filas...`, 'info');
+  
+  let exitosos = 0;
+  let errores = 0;
+  
+  // Actualizar en Supabase
+  for (const id of idsSeleccionados) {
+    try {
+      await actualizarIncidencia(id, { [campo]: nuevoValor });
+      exitosos++;
+      
+      // Actualizar también en datosOriginales
+      const fila = datosOriginales.find(d => d.id === id);
+      if (fila) fila[campo] = nuevoValor;
+    } catch (error) {
+      console.error(`Error actualizando ID ${id}:`, error);
+      errores++;
+    }
+  }
+  
+  // Refrescar tabla
+  tablaDT.clear();
+  tablaDT.rows.add(datosFiltrados);
+  tablaDT.draw(false);
+  
+  if (errores === 0) {
+    toast(`✅ ${exitosos} filas actualizadas`, 'exito');
+  } else {
+    toast(`⚠️ ${exitosos} actualizadas, ${errores} con error`, 'error');
+  }
+  
+  cancelarSeleccion();
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('modalEdicionMasiva').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalEdicion();
 });
 
 // ═══════════════════════════════════════════════════════════════

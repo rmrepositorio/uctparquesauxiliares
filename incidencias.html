@@ -44,6 +44,26 @@
   .excl-title { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
   .excl-barra { display: flex; gap: 8px; margin-bottom: 12px; }
   .excl-barra button { flex: 1; font-size: 11px; padding: 6px 0; }
+  
+  /* ✅ NUEVO: Buscador dentro del desplegable */
+  .excl-search {
+    width: 100%;
+    background: var(--input-bg, var(--bg3));
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .excl-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(20,184,166,0.15); }
+  .excl-search::placeholder { color: var(--text-muted); font-size: 11px; }
+  .excl-no-results { text-align: center; color: var(--text-muted); font-size: 11px; padding: 12px 4px; font-style: italic; display: none; }
+  .excl-row.hidden-by-search { display: none; }
+  
   .excl-lista { max-height: 250px; overflow-y: auto; margin-bottom: 12px; }
   .excl-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; border-radius: 6px; color: var(--text); transition: background 0.2s; }
   .excl-row:hover { background: var(--bg3); }
@@ -67,9 +87,9 @@
 <body>
 
 <div class="header">
-  <h1> Incidencias <span style="font-size:0.6em;color:var(--text-muted);font-weight:400;">— Editable</span></h1>
+  <h1>📝 Incidencias <span style="font-size:0.6em;color:var(--text-muted);font-weight:400;">— Editable</span></h1>
   <a href="index.html" class="btn-nav">🏠 Dashboard</a>
-  <a href="reiteradas.html" class="btn-nav">⚠️ Reiteradas</a>
+  <a href="reiteradas.html" class="btn-nav">✔Averias Reiterativas</a>
   <a href="pegar.html" class="btn-nav">📥 Pegar Datos</a>
   <button id="btnNueva" class="btn-nueva">➕ Nueva incidencia</button>
   <button id="toggleModo" class="btn-nav">☀ Modo claro</button>
@@ -93,17 +113,17 @@
   <!-- Panel de filtros por categoría -->
   <div class="panel-filtros">
     <div class="filtros-grid">
-      <button class="btn-filtro" data-campo="familia"> Familia Vehículo</button>
+      <button class="btn-filtro" data-campo="familia">🚛 Familia Vehículo</button>
       <button class="btn-filtro" data-campo="vhlo">🔢 Vehículo (VHLO)</button>
       <button class="btn-filtro" data-campo="familia_averia">🔧 Familia Avería</button>
-      <button class="btn-filtro" data-campo="turno"> Turno</button>
+      <button class="btn-filtro" data-campo="turno">🕐 Turno</button>
       <button class="btn-filtro" data-campo="origen_aviso">📍 Origen Aviso</button>
       <button class="btn-filtro" data-campo="tipo_orden">📋 Tipo Orden</button>
       <button class="btn-filtro" data-campo="conductor">👤 Conductor</button>
       <button class="btn-filtro" data-campo="deficiencias">⚠️ Deficiencias</button>
       <div class="sep-filtros"></div>
       <button class="btn-filtro" data-campo-especial="recurrencia">🔄 Recurrencia</button>
-      <button class="btn-filtro" data-campo-especial="subfamilia_trasera"> Subfamilia Trasera</button>
+      <button class="btn-filtro" data-campo-especial="subfamilia_trasera">🚚 Subfamilia Trasera</button>
       <button class="btn-filtro" data-campo-especial="subfamilia_lateral">📦 Subfamilia Lateral</button>
     </div>
     <div class="busqueda-desc">
@@ -115,7 +135,7 @@
   <div id="filtrosActivos" class="filtros-activos"></div>
 
   <div class="ayuda">
-     <strong>Clic en cualquier celda</strong> para editarla · <strong>Enter</strong> para guardar · <strong>Esc</strong> para cancelar · Usa los botones de arriba para filtrar por categoría
+    💡 <strong>Clic en cualquier celda</strong> para editarla · <strong>Enter</strong> para guardar · <strong>Esc</strong> para cancelar · Usa los botones de arriba para filtrar por categoría
   </div>
 
   <div style="background:var(--chart-bg); border:1px solid var(--chart-border); border-radius:12px; padding:20px; box-shadow:var(--shadow);">
@@ -228,7 +248,7 @@ async function cargarDatos() {
     
     while (true) {
       const { data, error } = await supabaseClient
-        .from(TABLA_PRINCIPAL)  // ✅ Usa la variable
+        .from(TABLA_PRINCIPAL)
         .select('*')
         .range(desde, desde + limite - 1)
         .order('id', { ascending: true });
@@ -295,7 +315,6 @@ function inicializarTabla() {
         data: 'n_aviso', 
         width: '110px',
         render: function(d, t, row) {
-          // ✅ Buscar por clave exacta de Supabase
           if (row.n_aviso !== undefined && row.n_aviso !== null && row.n_aviso !== '') return row.n_aviso;
           return '-';
         }
@@ -426,7 +445,6 @@ $('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)'
     
     celda.addClass('guardando').text('⏳');
     
-    // ✅ Usa la función de supabase-config.js
     actualizarIncidencia(id, { [campo]: nuevoValor })
       .then(() => {
         rowData[campo] = nuevoValor;
@@ -456,12 +474,11 @@ $('#tablaIncidencias tbody').on('click', '.btn-eliminar', async function(e) {
   if (!confirm(`¿Eliminar incidencia #${id}?`)) return;
   
   try {
-    // ✅ Usa la función de supabase-config.js
     await eliminarIncidencia(id);
     toast('✅ Eliminada', 'exito');
     cargarDatos();
   } catch (error) {
-    toast(' Error: ' + error.message, 'error');
+    toast('❌ Error: ' + error.message, 'error');
   }
 });
 
@@ -477,7 +494,6 @@ document.getElementById('btnNueva').addEventListener('click', async function() {
   };
   try {
     toast('🔄 Creando...', 'info');
-    // ✅ Usa la función de supabase-config.js
     await insertarIncidencias([nueva]);
     toast('✅ Creada', 'exito');
     setTimeout(() => cargarDatos(), 500);
@@ -490,7 +506,7 @@ document.getElementById('btnNueva').addEventListener('click', async function() {
 // EXPORTAR CSV
 // ═══════════════════════════════════════════════════════════════
 document.getElementById('btnExportarCSV').addEventListener('click', () => {
-  if (datosFiltrados.length === 0) { toast('️ Sin datos', 'error'); return; }
+  if (datosFiltrados.length === 0) { toast('⚠️ Sin datos', 'error'); return; }
   
   let csv = '\uFEFF';
   csv += 'ID;Fecha;Hora;Turno;VHLO;Familia;Conductor;Familia Avería;Deficiencias;Descripción;Origen;Tipo Orden;Nº Aviso;Foto\n';
@@ -627,6 +643,9 @@ document.querySelectorAll('.btn-filtro[data-campo-especial]').forEach(btn => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════
+// ✅ MENÚ DE FILTRO CON BUSCADOR INTEGRADO
+// ═══════════════════════════════════════════════════════════════
 function abrirMenuFiltro(campo, anchorEl) {
   cerrarMenus();
   const valores = [...new Set(datosOriginales.map(d => (d[campo] || '').toString().trim().toUpperCase()).filter(v => v && v !== '' && v !== '****'))].sort();
@@ -644,13 +663,21 @@ function abrirMenuFiltro(campo, anchorEl) {
   bar.className = 'excl-barra';
   const bT = document.createElement('button');
   bT.textContent = '✓ Todas';
-  bT.onclick = () => menu.querySelectorAll('input').forEach(cb => cb.checked = true);
+  bT.onclick = () => menu.querySelectorAll('.excl-row:not(.hidden-by-search) input').forEach(cb => cb.checked = true);
   const bN = document.createElement('button');
   bN.textContent = '✗ Ninguna';
-  bN.onclick = () => menu.querySelectorAll('input').forEach(cb => cb.checked = false);
+  bN.onclick = () => menu.querySelectorAll('.excl-row:not(.hidden-by-search) input').forEach(cb => cb.checked = false);
   bar.appendChild(bT);
   bar.appendChild(bN);
   menu.appendChild(bar);
+  
+  // ✅ NUEVO: Buscador dentro del desplegable
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'excl-search';
+  searchInput.placeholder = '🔍 Buscar valor...';
+  searchInput.autocomplete = 'off';
+  menu.appendChild(searchInput);
   
   const lista = document.createElement('div');
   lista.className = 'excl-lista';
@@ -672,12 +699,18 @@ function abrirMenuFiltro(campo, anchorEl) {
   
   menu.appendChild(lista);
   
+  // ✅ Mensaje "sin resultados"
+  const noResults = document.createElement('div');
+  noResults.className = 'excl-no-results';
+  noResults.textContent = '🔍 Sin resultados';
+  menu.appendChild(noResults);
+  
   const btn = document.createElement('button');
   btn.className = 'excl-aplicar';
   btn.textContent = 'Aplicar';
   btn.onclick = () => {
     const ex = new Set();
-    menu.querySelectorAll('input').forEach(cb => { if (!cb.checked) ex.add(cb.value); });
+    menu.querySelectorAll('input[type=checkbox]').forEach(cb => { if (!cb.checked) ex.add(cb.value); });
     exclusiones[campo] = ex;
     pushHistorial();
     renderTags();
@@ -687,6 +720,25 @@ function abrirMenuFiltro(campo, anchorEl) {
   menu.appendChild(btn);
   
   document.body.appendChild(menu);
+  
+  // ✅ Lógica del buscador: filtra las filas en tiempo real
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    let visibles = 0;
+    lista.querySelectorAll('.excl-row').forEach(row => {
+      const texto = row.querySelector('span').textContent.toLowerCase();
+      if (!q || texto.includes(q)) {
+        row.classList.remove('hidden-by-search');
+        visibles++;
+      } else {
+        row.classList.add('hidden-by-search');
+      }
+    });
+    noResults.style.display = visibles === 0 ? 'block' : 'none';
+  });
+  
+  // Enfocar automáticamente el buscador
+  setTimeout(() => searchInput.focus(), 50);
   
   const r = anchorEl.getBoundingClientRect();
   requestAnimationFrame(() => {
@@ -716,7 +768,7 @@ function abrirMenuRecurrencia(anchorEl) {
   const opciones = [
     { valor: '', texto: '🔄 Todos (sin filtro)' },
     { valor: 'unicos', texto: '✅ Únicos (1 avería)' },
-    { valor: 'reincidentes', texto: '️ Reincidentes (≥2 averías)' }
+    { valor: 'reincidentes', texto: '⚠️ Reincidentes (≥2 averías)' }
   ];
   
   opciones.forEach(op => {
@@ -768,6 +820,14 @@ function abrirMenuSubfamiliaTrasera(anchorEl) {
   tit.textContent = 'Filtrar: Subfamilia Trasera';
   menu.appendChild(tit);
   
+  // ✅ Buscador también aquí
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'excl-search';
+  searchInput.placeholder = '🔍 Buscar subfamilia...';
+  searchInput.autocomplete = 'off';
+  menu.appendChild(searchInput);
+  
   const lista = document.createElement('div');
   lista.className = 'excl-lista';
   
@@ -801,6 +861,15 @@ function abrirMenuSubfamiliaTrasera(anchorEl) {
   
   menu.appendChild(lista);
   
+  // ✅ Lógica del buscador
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    lista.querySelectorAll('.excl-row').forEach(row => {
+      const texto = row.querySelector('span').textContent.toLowerCase();
+      row.style.display = (!q || texto.includes(q)) ? 'flex' : 'none';
+    });
+  });
+  
   const btn = document.createElement('button');
   btn.className = 'excl-aplicar';
   btn.textContent = 'Aplicar';
@@ -832,6 +901,14 @@ function abrirMenuSubfamiliaLateral(anchorEl) {
   tit.className = 'excl-title';
   tit.textContent = 'Filtrar: Subfamilia Lateral';
   menu.appendChild(tit);
+  
+  // ✅ Buscador también aquí
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'excl-search';
+  searchInput.placeholder = '🔍 Buscar subfamilia...';
+  searchInput.autocomplete = 'off';
+  menu.appendChild(searchInput);
   
   const lista = document.createElement('div');
   lista.className = 'excl-lista';
@@ -865,6 +942,15 @@ function abrirMenuSubfamiliaLateral(anchorEl) {
   });
   
   menu.appendChild(lista);
+  
+  // ✅ Lógica del buscador
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    lista.querySelectorAll('.excl-row').forEach(row => {
+      const texto = row.querySelector('span').textContent.toLowerCase();
+      row.style.display = (!q || texto.includes(q)) ? 'flex' : 'none';
+    });
+  });
   
   const btn = document.createElement('button');
   btn.className = 'excl-aplicar';
@@ -1075,7 +1161,7 @@ document.addEventListener('click', (e) => {
 document.getElementById('toggleModo').addEventListener('click', () => {
   modoOscuro = !modoOscuro;
   document.body.classList.toggle('light-mode', !modoOscuro);
-  document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : ' Modo oscuro';
+  document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
   localStorage.setItem('ct_modo', modoOscuro ? 'dark' : 'light');
 });
 document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
@@ -1098,10 +1184,36 @@ function cargarEstado() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ✅ NUEVO: INICIALIZAR FECHAS CON RANGO DE LA BD
+// ═══════════════════════════════════════════════════════════════
+function inicializarFechas() {
+  if (datosOriginales.length === 0) return;
+  
+  const fechas = datosOriginales
+    .map(d => {
+      if (!d.fecha_aviso) return null;
+      const parts = d.fecha_aviso.split('/').map(Number);
+      if (parts.length === 3 && !parts.some(isNaN)) {
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      }
+      return null;
+    })
+    .filter(f => f && !isNaN(f));
+  
+  if (fechas.length === 0) return;
+  
+  const minFecha = new Date(Math.min(...fechas));
+  const maxFecha = new Date(Math.max(...fechas));
+  
+  document.getElementById('fechaInicio').valueAsDate = minFecha;
+  document.getElementById('fechaFin').valueAsDate = maxFecha;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // INICIALIZACIÓN
 // ═══════════════════════════════════════════════════════════════
 pushHistorial();
-cargarDatos();
+cargarDatos().then(() => inicializarFechas());
 </script>
 </body>
 </html>

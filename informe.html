@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe General — Control Tráfico - Parques Auxiliares</title>
+
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  body { padding: 0; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.9em; margin-bottom: 14px; }
+  .back-link:hover { opacity: 0.7; }
+  
+  .informe-header {
+    background: linear-gradient(135deg, rgba(20,184,166,0.1), rgba(139,92,246,0.1));
+    border: 1px solid var(--accent); border-radius: 12px; padding: 24px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+  }
+  .informe-header h1 { margin: 0; color: var(--accent); font-size: 1.6em; }
+  .informe-header .subtitle { color: var(--text-muted); font-size: 0.9em; margin-top: 4px; }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  
+  .btn-action {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all 0.2s; font-family: 'Inter', sans-serif;
+  }
+  .btn-pdf { background: #ef4444; color: white; }
+  .btn-pdf:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-excel { background: #10b981; color: white; }
+  .btn-excel:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-doc { background: #2b579a; color: white; }
+  .btn-doc:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-print { background: var(--accent3); color: white; }
+  .btn-print:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-modo { background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border); }
+  .btn-modo:hover { background: var(--btn-hover); color: var(--btn-hover-text); }
+  .btn-secondary { background: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--btn-hover); }
+  
+  .filtros-panel {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 20px;
+  }
+  .filtros-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .filtros-row:last-child { margin-bottom: 0; }
+  .filtros-panel label { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; font-weight: 500; }
+  .filtros-panel input[type="date"] {
+    padding: 6px 10px; background: var(--input-bg); color: var(--input-text);
+    border: 1px solid var(--input-border); border-radius: 6px; font-size: 12px;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  .btn-filtro-multi {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--btn-bg); color: var(--btn-text);
+    border: 1px solid var(--border); padding: 7px 14px; border-radius: 8px;
+    font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+    white-space: nowrap; position: relative;
+  }
+  .btn-filtro-multi:hover { background: var(--btn-hover); color: var(--btn-hover-text); transform: translateY(-1px); }
+  .btn-filtro-multi.activo { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .btn-filtro-multi .contador-filtro {
+    background: var(--accent4); color: white; border-radius: 10px;
+    padding: 1px 7px; font-size: 10px; font-weight: 700; margin-left: 4px;
+  }
+  .btn-filtro-multi.activo .contador-filtro { background: white; color: var(--accent); }
+  
+  .multi-dropdown {
+    position: fixed; z-index: 9999; background: var(--bg2);
+    border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.45); width: 300px;
+    padding: 14px; font-size: 12px; max-height: 80vh;
+    display: none; flex-direction: column;
+  }
+  .multi-dropdown.open { display: flex; }
+  .multi-dropdown-title {
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px;
+    color: var(--text); margin-bottom: 10px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .multi-dropdown-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+  .multi-dropdown-bar button {
+    flex: 1; font-size: 11px; padding: 5px 0;
+    background: var(--btn-bg); color: var(--btn-text);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .multi-dropdown-bar button:hover { background: var(--accent); color: var(--bg); }
+  .multi-dropdown-search {
+    width: 100%; padding: 7px 10px; background: var(--input-bg, var(--bg3));
+    color: var(--text); border: 1px solid var(--border); border-radius: 6px;
+    margin-bottom: 8px; font-size: 12px; font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
+  }
+  .multi-dropdown-search:focus { outline: none; border-color: var(--accent); }
+  .multi-dropdown-search::placeholder { color: var(--text-muted); font-size: 11px; }
+  .multi-dropdown-list { flex: 1; overflow-y: auto; max-height: 280px; margin-bottom: 10px; }
+  .multi-dropdown-item {
+    display: flex; align-items: center; gap: 8px; padding: 5px 6px;
+    cursor: pointer; border-radius: 4px; color: var(--text); transition: background 0.2s;
+  }
+  .multi-dropdown-item:hover { background: var(--bg3); }
+  .multi-dropdown-item.hidden-by-search { display: none; }
+  .multi-dropdown-item input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+  .multi-dropdown-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-size: 12px; }
+  .multi-dropdown-item .count-badge {
+    font-size: 10px; color: var(--text-muted); background: var(--bg3);
+    padding: 1px 6px; border-radius: 8px;
+  }
+  .multi-dropdown-no-results {
+    text-align: center; color: var(--text-muted); font-size: 11px;
+    padding: 12px 4px; font-style: italic; display: none;
+  }
+  .multi-dropdown-footer { padding-top: 10px; border-top: 1px solid var(--border); }
+  .multi-dropdown-apply {
+    width: 100%; background: var(--accent); color: var(--bg);
+    font-weight: 600; border: none; padding: 9px; border-radius: 8px;
+    cursor: pointer; transition: opacity 0.2s; font-size: 12px;
+  }
+  .multi-dropdown-apply:hover { opacity: 0.85; }
+  
+  .filtros-activos-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; min-height: 24px; }
+  .filtro-tag {
+    font-size: 11px; background: var(--accent); color: var(--bg);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer;
+    font-weight: 500; transition: opacity 0.2s; display: inline-flex;
+    align-items: center; gap: 6px;
+  }
+  .filtro-tag:hover { opacity: 0.8; }
+  .filtro-tag .tag-close { font-weight: 700; opacity: 0.7; }
+  
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px; text-align: center; border-top: 3px solid var(--accent);
+  }
+  .kpi-card:nth-child(2) { border-top-color: var(--accent2); }
+  .kpi-card:nth-child(3) { border-top-color: var(--accent3); }
+  .kpi-card:nth-child(4) { border-top-color: var(--accent4); }
+  .kpi-card:nth-child(5) { border-top-color: var(--accent5); }
+  .kpi-card:nth-child(6) { border-top-color: var(--accent7); }
+  .kpi-label { font-size: 0.75em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-family: 'Inter', sans-serif; font-weight: 500; }
+  .kpi-value { font-family: 'Rajdhani', sans-serif; font-size: 2em; font-weight: 700; color: var(--text); }
+  
+  .seccion { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .seccion h2 {
+    margin: 0 0 16px 0; color: var(--text); font-size: 1.2em;
+    padding-bottom: 10px; border-bottom: 2px solid var(--accent);
+    display: flex; align-items: center; gap: 8px;
+  }
+  
+  .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .chart-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .chart-box h3 { margin: 0 0 12px 0; font-size: 0.95em; color: var(--text); }
+  .chart-wrapper { position: relative; height: 320px; }
+  
+  .tabla-informe { width: 100%; border-collapse: collapse; font-size: 0.85em; margin-top: 12px; }
+  .tabla-informe th {
+    background: var(--table-header); color: var(--text); padding: 10px 12px;
+    text-align: left; font-weight: 600; border-bottom: 2px solid var(--accent); font-size: 0.9em;
+  }
+  .tabla-informe td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .tabla-informe tr:nth-child(even) td { background: var(--table-alt); }
+  .tabla-informe tr:hover td { background: var(--bg3); }
+  
+  .badge-veces {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-weight: 700; font-size: 11px; color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  
+  .texto-informe {
+    background: var(--bg3); border-left: 4px solid var(--accent);
+    border-radius: 8px; padding: 20px 24px; margin-bottom: 20px;
+    font-size: 0.95em; line-height: 1.7; color: var(--text);
+  }
+  .texto-informe h3 { margin: 0 0 12px 0; color: var(--accent); font-size: 1.1em; display: flex; align-items: center; gap: 8px; }
+  .texto-informe p { margin: 0 0 12px 0; }
+  .texto-informe strong { color: var(--accent); }
+  .texto-informe .highlight { background: rgba(20, 184, 166, 0.15); padding: 2px 8px; border-radius: 4px; font-weight: 600; color: var(--accent); }
+  .texto-informe ul { margin: 8px 0; padding-left: 24px; }
+  .texto-informe li { margin-bottom: 6px; }
+  .texto-informe .alerta { background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--accent4); padding: 10px 14px; border-radius: 4px; margin: 12px 0; }
+  .texto-informe .recomendacion { background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--accent7); padding: 10px 14px; border-radius: 4px; margin: 12px 0; }
+  
+  .loading-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999;
+    display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+  }
+  .loading-overlay.active { display: flex; }
+  .loading-spinner { width: 60px; height: 60px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: white; font-size: 1.1em; font-weight: 500; }
+  .loading-progress { color: white; font-size: 0.9em; margin-top: 8px; }
+  
+  .informe-titulo-print { display: none; text-align: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid var(--accent); }
+  .informe-titulo-print h1 { margin: 0; color: var(--accent); font-size: 1.8em; }
+  .informe-titulo-print .fecha-gen { color: var(--text-muted); font-size: 0.9em; margin-top: 8px; }
+  
+  .informe-footer { text-align: center; padding: 16px; color: var(--text-muted); font-size: 0.8em; border-top: 1px solid var(--border); margin-top: 24px; }
+  
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; border-radius: 10px; color: white; font-weight: 500; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 99999; animation: slideIn 0.3s ease-out; max-width: 400px; }
+  .toast.exito { background: #10b981; } .toast.error { background: #ef4444; } .toast.info { background: #3b82f6; }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .informe-header { flex-direction: column; align-items: flex-start; }
+  }
+  
+  @media print {
+    body { background: white !important; }
+    .header, .back-link, .filtros-panel, .header-actions, .informe-footer, .filtros-activos-tags { display: none !important; }
+    .informe-titulo-print { display: block !important; }
+    .seccion { page-break-inside: avoid; border: 1px solid #ccc; }
+    .container { max-width: 100%; padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <a href="index.html" class="back-link">◀ Volver al Dashboard</a>
+  
+  <div class="informe-header">
+    <div>
+      <h1>📊 Informe General de Averías</h1>
+      <div class="subtitle">Parques Auxiliares · Unidad Control Tráfico</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-action btn-modo" id="btnModo" onclick="toggleModo()">☀ Modo claro</button>
+      <button class="btn-action btn-pdf" onclick="exportarPDF()">📄 PDF</button>
+      <button class="btn-action btn-excel" onclick="exportarExcel()">📊 Excel</button>
+      <button class="btn-action btn-doc" onclick="exportarDOC()">📝 DOC</button>
+      <button class="btn-action btn-print" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+  </div>
+  
+  <div class="informe-titulo-print">
+    <h1>📊 Informe General de Averías</h1>
+    <div class="fecha-gen" id="fechaGeneracion">Generado el: -</div>
+    <div class="fecha-gen">Parques Auxiliares · Unidad Control Tráfico</div>
+  </div>
+  
+  <div class="filtros-panel">
+    <div class="filtros-row">
+      <label>📅 Desde: <input type="date" id="fechaInicio"></label>
+      <label>📅 Hasta: <input type="date" id="fechaFin"></label>
+    </div>
+    <div class="filtros-row">
+      <button class="btn-filtro-multi" data-campo="familia" onclick="abrirMenuFiltroMulti('familia', this)">🚛 Familia Vehículo</button>
+      <button class="btn-filtro-multi" data-campo="vhlo" onclick="abrirMenuFiltroMulti('vhlo', this)">🔢 Vehículo</button>
+      <button class="btn-filtro-multi" data-campo="familia_averia" onclick="abrirMenuFiltroMulti('familia_averia', this)">🔧 Familia Avería</button>
+      <button class="btn-filtro-multi" data-campo="deficiencias" onclick="abrirMenuFiltroMulti('deficiencias', this)">⚠️ Deficiencias</button>
+      <button class="btn-filtro-multi" data-campo="origen_aviso" onclick="abrirMenuFiltroMulti('origen_aviso', this)">📍 Origen Aviso</button>
+    </div>
+    <div class="filtros-row">
+      <button class="btn-action btn-secondary" onclick="generarInforme()">🔄 Generar Informe</button>
+      <button class="btn-action btn-secondary" onclick="limpiarFiltros()">✕ Limpiar todo</button>
+    </div>
+    <div class="filtros-activos-tags" id="filtrosActivosTags"></div>
+  </div>
+  
+  <div class="multi-dropdown" id="multiDropdown"></div>
+  
+  <div id="contenidoInforme">
+    
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total Incidencias</div><div class="kpi-value" id="kpiTotal">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">Vehículos Afectados</div><div class="kpi-value" id="kpiVehiculos">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">Promedio Diario</div><div class="kpi-value" id="kpiPromedio">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">Combinaciones Reiteradas</div><div class="kpi-value" id="kpiReiteradas">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">Vehículo Top</div><div class="kpi-value" id="kpiTopVehiculo" style="font-size:1.5em;">-</div></div>
+      <div class="kpi-card"><div class="kpi-label">Familia Avería Top</div><div class="kpi-value" id="kpiTopFamilia" style="font-size:1.2em;">-</div></div>
+    </div>
+    
+    <div class="texto-informe" id="textoInforme">
+      <h3>📝 Análisis del Periodo</h3>
+      <p>Cargando análisis...</p>
+    </div>
+    
+    <div class="charts-grid">
+      <div class="chart-box"><h3>🥧 Distribución por Familia de Avería</h3><div class="chart-wrapper"><canvas id="chartFamilia"></canvas></div></div>
+      <div class="chart-box"><h3>📊 Top 15 Vehículos con Más Averías</h3><div class="chart-wrapper"><canvas id="chartVehiculos"></canvas></div></div>
+      <div class="chart-box"><h3>🕐 Distribución por Turno</h3><div class="chart-wrapper"><canvas id="chartTurno"></canvas></div></div>
+      <div class="chart-box"><h3>📋 Tipo de Orden</h3><div class="chart-wrapper"><canvas id="chartTipoOrden"></canvas></div></div>
+    </div>
+    
+    <div class="charts-grid">
+      <div class="chart-box"><h3>⚠️ Top 15 Deficiencias Detectadas</h3><div class="chart-wrapper"><canvas id="chartDeficiencias"></canvas></div></div>
+      <div class="chart-box"><h3>📍 Distribución por Origen de Aviso</h3><div class="chart-wrapper"><canvas id="chartOrigen"></canvas></div></div>
+    </div>
+    
+    <div class="seccion">
+      <h2>📈 Evolución Mensual de Averías</h2>
+      <div style="height: 320px;"><canvas id="chartEvolucion"></canvas></div>
+    </div>
+    
+    <div class="seccion">
+      <h2>📊 Evolución Mensual por Familia de Avería</h2>
+      <p style="color: var(--text-muted); font-size: 0.85em; margin: -8px 0 16px 0;">
+        Tendencia de las 6 familias de avería más frecuentes en el periodo analizado
+      </p>
+      <div style="height: 400px;"><canvas id="chartEvolucionFamilias"></canvas></div>
+    </div>
+    
+    <div class="seccion">
+      <h2>⚠️ Averías Reiterativas (≥3 apariciones)</h2>
+      <p style="color: var(--text-muted); font-size: 0.85em; margin: -8px 0 12px 0;">
+        Combinaciones de Vehículo + Deficiencia que se repiten 3 o más veces en el periodo
+      </p>
+      <div style="overflow-x: auto;">
+        <table class="tabla-informe" id="tablaReiteradas">
+          <thead><tr><th>VHLO</th><th>Deficiencia</th><th>Veces</th><th>Familia Avería</th><th>Primera vez</th><th>Última vez</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="seccion">
+      <h2>🔍 Top 20 Descripciones de Avería</h2>
+      <div style="height: 500px;"><canvas id="chartDescripciones"></canvas></div>
+    </div>
+    
+    <div class="seccion">
+      <h2>🚛 Análisis por Familia de Vehículo</h2>
+      <div style="overflow-x: auto;">
+        <table class="tabla-informe" id="tablaFamilias">
+          <thead><tr><th>Familia</th><th>Total Averías</th><th>Vehículos Únicos</th><th>Media/Vehículo</th><th>% del Total</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="charts-grid">
+      <div class="chart-box"><h3>🚚 Carga Lateral - Subfamilias</h3><div class="chart-wrapper"><canvas id="chartCargaLateral"></canvas></div></div>
+      <div class="chart-box"><h3>🚛 Carga Trasera - Subfamilias</h3><div class="chart-wrapper"><canvas id="chartCargaTrasera"></canvas></div></div>
+    </div>
+    
+  </div>
+  
+  <div class="informe-footer">
+    Informe generado automáticamente · Control Tráfico - Parques Auxiliares · <span id="footerFecha"></span>
+  </div>
+  
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">Generando informe...</div>
+  <div class="loading-progress" id="loadingProgress"></div>
+</div>
+
+<script src="supabase-configinformeaux.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// PLUGIN PERSONALIZADO: MOSTRAR VALORES EN GRÁFICOS
+// ═══════════════════════════════════════════════════════════════
+const pluginDataLabels = {
+  id: 'customDataLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx, data } = chart;
+    const type = chart.config.type;
+    
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    if (type === 'pie' || type === 'doughnut') {
+      const dataset = data.datasets[0];
+      const meta = chart.getDatasetMeta(0);
+      const total = dataset.data.reduce((a, b) => a + b, 0);
+      
+      if (total === 0) { ctx.restore(); return; }
+      
+      meta.data.forEach((arc, i) => {
+        const value = dataset.data[i];
+        if (!value || value === 0) return;
+        
+        const porcentaje = (value / total) * 100;
+        const { x, y } = arc.tooltipPosition();
+        
+        if (porcentaje >= 6) {
+          ctx.font = 'bold 13px Inter, sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = 'rgba(0,0,0,0.6)';
+          ctx.shadowBlur = 4;
+          ctx.fillText(value.toLocaleString('es-ES'), x, y - 7);
+          
+          ctx.font = '11px Inter, sans-serif';
+          ctx.fillText(`(${porcentaje.toFixed(1)}%)`, x, y + 8);
+          ctx.shadowBlur = 0;
+        } 
+        else if (porcentaje >= 3) {
+          const center = arc.getCenterPoint();
+          const angle = (arc.startAngle + arc.endAngle) / 2;
+          const radius = arc.outerRadius + 25;
+          const xExt = center.x + Math.cos(angle) * radius;
+          const yExt = center.y + Math.sin(angle) * radius;
+          
+          ctx.strokeStyle = getTextColor();
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(xExt, yExt);
+          ctx.stroke();
+          
+          ctx.font = 'bold 11px Inter, sans-serif';
+          ctx.fillStyle = getTextColor();
+          ctx.shadowBlur = 0;
+          ctx.textAlign = xExt > center.x ? 'left' : 'right';
+          ctx.fillText(`${value} (${porcentaje.toFixed(1)}%)`, xExt + (xExt > center.x ? 4 : -4), yExt);
+          ctx.textAlign = 'center';
+        }
+      });
+    }
+    
+    else if (type === 'bar' && chart.options.indexAxis === 'y') {
+      const dataset = data.datasets[0];
+      const meta = chart.getDatasetMeta(0);
+      
+      meta.data.forEach((bar, i) => {
+        const value = dataset.data[i];
+        if (!value && value !== 0) return;
+        
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillStyle = getTextColor();
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(value.toLocaleString('es-ES'), bar.x + 5, bar.y);
+      });
+    }
+    
+    else if (type === 'bar') {
+      const dataset = data.datasets[0];
+      const meta = chart.getDatasetMeta(0);
+      
+      meta.data.forEach((bar, i) => {
+        const value = dataset.data[i];
+        if (!value && value !== 0) return;
+        
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillStyle = getTextColor();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(value.toLocaleString('es-ES'), bar.x, bar.y - 4);
+      });
+    }
+    
+    else if (type === 'line') {
+      data.datasets.forEach((dataset, dsIndex) => {
+        const meta = chart.getDatasetMeta(dsIndex);
+        
+        meta.data.forEach((point, i) => {
+          const value = dataset.data[i];
+          if (!value && value !== 0) return;
+          
+          ctx.font = 'bold 10px Inter, sans-serif';
+          ctx.fillStyle = dataset.borderColor || getTextColor();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(value.toLocaleString('es-ES'), point.x, point.y - 6);
+        });
+      });
+    }
+    
+    ctx.restore();
+  }
+};
+
+Chart.register(pluginDataLabels);
+
+// ═══════════════════════════════════════════════════════════════
+// VARIABLES GLOBALES
+// ═══════════════════════════════════════════════════════════════
+let datosOriginales = [];
+let datosFiltrados = [];
+let charts = {};
+let modoOscuro = localStorage.getItem('ct_modo') !== 'light';
+
+let filtrosMulti = {
+  familia: new Set(),
+  vhlo: new Set(),
+  familia_averia: new Set(),
+  deficiencias: new Set(),
+  origen_aviso: new Set()
+};
+
+let valoresUnicos = {
+  familia: [],
+  vhlo: [],
+  familia_averia: [],
+  deficiencias: [],
+  origen_aviso: []
+};
+
+let valoresConteos = {
+  familia: {},
+  vhlo: {},
+  familia_averia: {},
+  deficiencias: {},
+  origen_aviso: {}
+};
+
+const PALETA = ['#00d4aa','#7c6fe0','#ff6b6b','#ffd166','#06d6a0','#118ab2','#ef476f','#f78c6b','#88d498','#c77dff','#48cae4','#f4a261','#e76f51','#2ec4b6','#e9c46a','#a8dadc','#457b9d','#e63946','#2a9d8f','#f3722c'];
+const MAPA_TIPO_ORDEN = { 'L02': 'Accidente', 'L05': 'Golpe / Mal Uso' };
+const ETIQUETA_AVERIA = 'Avería';
+
+const NOMBRES_CAMPOS = {
+  familia: '🚛 Familia Vehículo',
+  vhlo: '🔢 Vehículo',
+  familia_averia: '🔧 Familia Avería',
+  deficiencias: '⚠️ Deficiencias',
+  origen_aviso: '📍 Origen Aviso'
+};
+
+// ✅ Inicializar modo al cargar
+if (!modoOscuro) document.body.classList.add('light-mode');
+document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+
+function getTextColor() {
+  const isLight = document.body.classList.contains('light-mode');
+  return isLight ? '#333333' : '#e0e0e0';
+}
+
+function getGridColor() {
+  const isLight = document.body.classList.contains('light-mode');
+  return isLight ? '#e0e0e0' : '#444444';
+}
+
+// ✅ NUEVO: Toggle modo claro/oscuro
+function toggleModo() {
+  modoOscuro = !modoOscuro;
+  document.body.classList.toggle('light-mode', !modoOscuro);
+  document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+  localStorage.setItem('ct_modo', modoOscuro ? 'dark' : 'light');
+  
+  // Regenerar gráficos con los nuevos colores
+  if (datosFiltrados.length > 0) {
+    actualizarGraficos();
+  }
+}
+
+function normStr(s) { return s ? s.toString().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() : ''; }
+
+function parseFecha(fechaStr) {
+  if (!fechaStr) return null;
+  const str = fechaStr.toString().trim();
+  const parts1 = str.split('/').map(Number);
+  if (parts1.length === 3 && !parts1.some(isNaN)) return new Date(parts1[2], parts1[1] - 1, parts1[0]);
+  const parts2 = str.split('-').map(Number);
+  if (parts2.length === 3 && !parts2.some(isNaN)) return new Date(parts2[0], parts2[1] - 1, parts2[2]);
+  const d = new Date(str);
+  if (!isNaN(d)) return d;
+  return null;
+}
+
+function formatearFecha(date) {
+  if (!date || isNaN(date)) return '-';
+  return `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}`;
+}
+
+function getEtiquetaTipoOrden(codigo) {
+  const cod = (codigo || '').toString().trim().toUpperCase();
+  if (!cod || cod === '****') return null;
+  return MAPA_TIPO_ORDEN[cod] || ETIQUETA_AVERIA;
+}
+
+function getSubfamiliaTrasera(vhlo, familia) {
+  if (familia && familia.toUpperCase().includes('MINICOMPACTADOR')) return 'MINICOMPACTADORES';
+  const n = parseInt(vhlo);
+  if (isNaN(n)) return null;
+  if (n === 140 || n === 146) return 'MEDIANOS';
+  if (n >= 142 && n <= 183) return '2 EJES';
+  if (n >= 1170 && n <= 1172) return 'ECONIC ELECTRICOS';
+  if (n >= 1173 && n <= 1179) return 'VOLVO';
+  return null;
+}
+
+function getSubfamiliaLateral(vhlo) {
+  const n = parseInt(vhlo);
+  if (isNaN(n)) return null;
+  if (n >= 1100 && n <= 1121) return 'FARID ANTIGUOS';
+  if (n >= 1135 && n <= 1138) return 'FARID NUEVOS';
+  if (n >= 1130 && n <= 1334) return 'OMB';
+  if (n >= 3100 && n <= 3123) return 'WASTERRENT';
+  if (n >= 1121 && n <= 1128) return 'AMS';
+  return null;
+}
+
+function genColores(n) {
+  const cols = [];
+  for (let i = 0; i < n; i++) cols.push(PALETA[i % PALETA.length]);
+  return cols;
+}
+
+function getColorVeces(v) {
+  if (v <= 3) return '#10b981';
+  if (v <= 5) return '#22c55e';
+  if (v <= 7) return '#84cc16';
+  if (v <= 10) return '#f59e0b';
+  if (v <= 15) return '#f97316';
+  if (v <= 20) return '#ef4444';
+  if (v <= 30) return '#dc2626';
+  return '#7f1d1d';
+}
+
+function toast(texto, tipo = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast ${tipo}`;
+  t.textContent = texto;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+function showLoading(texto = 'Generando informe...', progreso = '') {
+  document.getElementById('loadingText').textContent = texto;
+  document.getElementById('loadingProgress').textContent = progreso;
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+async function cargarDatos() {
+  showLoading('Cargando datos desde Supabase...');
+  try {
+    let todosLosDatos = [];
+    let desde = 0;
+    const limite = 1000;
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from('incidencias_aux')
+        .select('*')
+        .range(desde, desde + limite - 1)
+        .order('id', { ascending: true });
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      todosLosDatos = todosLosDatos.concat(data);
+      if (data.length < limite) break;
+      desde += limite;
+    }
+    
+    datosOriginales = todosLosDatos.map(d => ({
+      id: d.id, fecha_aviso: d.fecha_aviso || '', fechaJS: parseFecha(d.fecha_aviso),
+      hora: d.hora || '', turno: normStr(d.turno), vhlo: normStr(d.vhlo),
+      familia: normStr(d.familia), conductor: d.conductor || '',
+      familia_averia: normStr(d.familia_averia), deficiencias: normStr(d.deficiencias),
+      descripcion_averia: d.descripcion_averia || '', origen_aviso: normStr(d.origen_aviso),
+      tipo_orden: normStr(d.tipo_orden), n_aviso: d.n_aviso || '', foto: d.foto || ''
+    })).filter(d => d.fechaJS && !isNaN(d.fechaJS));
+    
+    console.log(`✅ Cargados ${datosOriginales.length} registros`);
+    
+    calcularValoresUnicos();
+    
+    if (datosOriginales.length > 0) {
+      const fechas = datosOriginales.map(d => d.fechaJS);
+      document.getElementById('fechaInicio').valueAsDate = new Date(Math.min(...fechas));
+      document.getElementById('fechaFin').valueAsDate = new Date(Math.max(...fechas));
+    }
+    
+    generarInforme();
+    document.getElementById('footerFecha').textContent = new Date().toLocaleString('es-ES');
+    document.getElementById('fechaGeneracion').textContent = 'Generado el: ' + new Date().toLocaleString('es-ES');
+    
+    hideLoading();
+    toast(`✅ ${datosOriginales.length} registros cargados`, 'exito');
+  } catch (e) {
+    console.error('Error:', e);
+    hideLoading();
+    toast('❌ Error: ' + e.message, 'error');
+  }
+}
+
+function calcularValoresUnicos() {
+  const campos = ['familia', 'vhlo', 'familia_averia', 'deficiencias', 'origen_aviso'];
+  
+  campos.forEach(campo => {
+    const conteos = {};
+    datosOriginales.forEach(d => {
+      const val = (d[campo] || '').toString().trim();
+      if (val && val !== '' && val !== '****') {
+        conteos[val] = (conteos[val] || 0) + 1;
+      }
+    });
+    
+    valoresConteos[campo] = conteos;
+    
+    if (campo === 'vhlo') {
+      valoresUnicos[campo] = Object.keys(conteos).sort((a, b) => {
+        const na = parseFloat(a), nb = parseFloat(b);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return a.localeCompare(b);
+      });
+    } else {
+      valoresUnicos[campo] = Object.keys(conteos).sort();
+    }
+  });
+}
+
+function abrirMenuFiltroMulti(campo, anchorEl) {
+  cerrarMenuFiltroMulti();
+  
+  const dropdown = document.getElementById('multiDropdown');
+  dropdown.innerHTML = '';
+  
+  const titulo = document.createElement('div');
+  titulo.className = 'multi-dropdown-title';
+  titulo.textContent = `Filtrar por ${NOMBRES_CAMPOS[campo]}`;
+  dropdown.appendChild(titulo);
+  
+  const barra = document.createElement('div');
+  barra.className = 'multi-dropdown-bar';
+  const btnTodos = document.createElement('button');
+  btnTodos.textContent = '✓ Todos';
+  btnTodos.onclick = (e) => {
+    e.stopPropagation();
+    dropdown.querySelectorAll('.multi-dropdown-item:not(.hidden-by-search) input[type=checkbox]').forEach(cb => cb.checked = true);
+  };
+  const btnNinguno = document.createElement('button');
+  btnNinguno.textContent = '✗ Ninguno';
+  btnNinguno.onclick = (e) => {
+    e.stopPropagation();
+    dropdown.querySelectorAll('.multi-dropdown-item:not(.hidden-by-search) input[type=checkbox]').forEach(cb => cb.checked = false);
+  };
+  barra.appendChild(btnTodos);
+  barra.appendChild(btnNinguno);
+  dropdown.appendChild(barra);
+  
+  const buscador = document.createElement('input');
+  buscador.type = 'text';
+  buscador.className = 'multi-dropdown-search';
+  buscador.placeholder = '🔍 Buscar...';
+  buscador.onclick = (e) => e.stopPropagation();
+  dropdown.appendChild(buscador);
+  
+  const lista = document.createElement('div');
+  lista.className = 'multi-dropdown-list';
+  
+  const valores = valoresUnicos[campo];
+  const seleccionados = filtrosMulti[campo];
+  
+  valores.forEach(val => {
+    const item = document.createElement('label');
+    item.className = 'multi-dropdown-item';
+    item.dataset.valor = val;
+    
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = val;
+    cb.checked = seleccionados.size === 0 || seleccionados.has(val);
+    cb.onclick = (e) => e.stopPropagation();
+    
+    const sp = document.createElement('span');
+    sp.textContent = val;
+    sp.title = val;
+    
+    const badge = document.createElement('span');
+    badge.className = 'count-badge';
+    badge.textContent = valoresConteos[campo][val] || 0;
+    
+    item.appendChild(cb);
+    item.appendChild(sp);
+    item.appendChild(badge);
+    lista.appendChild(item);
+  });
+  
+  dropdown.appendChild(lista);
+  
+  const noResults = document.createElement('div');
+  noResults.className = 'multi-dropdown-no-results';
+  noResults.textContent = '🔍 Sin resultados';
+  dropdown.appendChild(noResults);
+  
+  const footer = document.createElement('div');
+  footer.className = 'multi-dropdown-footer';
+  const btnAplicar = document.createElement('button');
+  btnAplicar.className = 'multi-dropdown-apply';
+  btnAplicar.textContent = '💾 Aplicar filtro';
+  btnAplicar.onclick = (e) => {
+    e.stopPropagation();
+    aplicarFiltroMulti(campo);
+    cerrarMenuFiltroMulti();
+  };
+  footer.appendChild(btnAplicar);
+  dropdown.appendChild(footer);
+  
+  buscador.addEventListener('input', () => {
+    const q = buscador.value.trim().toLowerCase();
+    let visibles = 0;
+    lista.querySelectorAll('.multi-dropdown-item').forEach(item => {
+      const texto = item.dataset.valor.toLowerCase();
+      if (!q || texto.includes(q)) {
+        item.classList.remove('hidden-by-search');
+        visibles++;
+      } else {
+        item.classList.add('hidden-by-search');
+      }
+    });
+    noResults.style.display = visibles === 0 ? 'block' : 'none';
+  });
+  
+  const rect = anchorEl.getBoundingClientRect();
+  dropdown.style.top = (rect.bottom + 6) + 'px';
+  let left = rect.left;
+  if (left + 320 > window.innerWidth) left = window.innerWidth - 320;
+  if (left < 10) left = 10;
+  dropdown.style.left = left + 'px';
+  dropdown.classList.add('open');
+  
+  setTimeout(() => buscador.focus(), 50);
+  
+  setTimeout(() => {
+    document.addEventListener('click', cerrarMenuFiltroAlFuera);
+  }, 10);
+}
+
+function cerrarMenuFiltroMulti() {
+  const dropdown = document.getElementById('multiDropdown');
+  dropdown.classList.remove('open');
+  document.removeEventListener('click', cerrarMenuFiltroAlFuera);
+}
+
+function cerrarMenuFiltroAlFuera(e) {
+  const dropdown = document.getElementById('multiDropdown');
+  if (!dropdown.contains(e.target) && !e.target.closest('.btn-filtro-multi')) {
+    cerrarMenuFiltroMulti();
+  }
+}
+
+function aplicarFiltroMulti(campo) {
+  const dropdown = document.getElementById('multiDropdown');
+  const checkboxes = dropdown.querySelectorAll('.multi-dropdown-item input[type=checkbox]');
+  const total = checkboxes.length;
+  
+  const nuevos = new Set();
+  checkboxes.forEach(cb => {
+    if (cb.checked) nuevos.add(cb.value);
+  });
+  
+  if (nuevos.size === 0 || nuevos.size === total) {
+    filtrosMulti[campo] = new Set();
+  } else {
+    filtrosMulti[campo] = nuevos;
+  }
+  
+  actualizarBotonesFiltro();
+  renderTagsFiltros();
+  generarInforme();
+}
+
+function actualizarBotonesFiltro() {
+  document.querySelectorAll('.btn-filtro-multi').forEach(btn => {
+    const campo = btn.dataset.campo;
+    const set = filtrosMulti[campo];
+    
+    const oldBadge = btn.querySelector('.contador-filtro');
+    if (oldBadge) oldBadge.remove();
+    
+    if (set && set.size > 0) {
+      btn.classList.add('activo');
+      const badge = document.createElement('span');
+      badge.className = 'contador-filtro';
+      badge.textContent = set.size;
+      btn.appendChild(badge);
+    } else {
+      btn.classList.remove('activo');
+    }
+  });
+}
+
+function renderTagsFiltros() {
+  const cont = document.getElementById('filtrosActivosTags');
+  cont.innerHTML = '';
+  
+  Object.entries(filtrosMulti).forEach(([campo, set]) => {
+    if (!set || set.size === 0) return;
+    
+    const tag = document.createElement('span');
+    tag.className = 'filtro-tag';
+    tag.innerHTML = `${NOMBRES_CAMPOS[campo]}: ${set.size} <span class="tag-close">✕</span>`;
+    tag.title = [...set].slice(0, 10).join(', ') + (set.size > 10 ? `... y ${set.size - 10} más` : '');
+    tag.onclick = () => {
+      filtrosMulti[campo] = new Set();
+      actualizarBotonesFiltro();
+      renderTagsFiltros();
+      generarInforme();
+    };
+    cont.appendChild(tag);
+  });
+}
+
+function limpiarFiltros() {
+  Object.keys(filtrosMulti).forEach(k => filtrosMulti[k] = new Set());
+  
+  if (datosOriginales.length > 0) {
+    const fechas = datosOriginales.map(d => d.fechaJS);
+    document.getElementById('fechaInicio').valueAsDate = new Date(Math.min(...fechas));
+    document.getElementById('fechaFin').valueAsDate = new Date(Math.max(...fechas));
+  }
+  
+  actualizarBotonesFiltro();
+  renderTagsFiltros();
+  generarInforme();
+}
+
+function generarInforme() {
+  showLoading('Procesando datos...');
+  setTimeout(() => {
+    try {
+      const fi = document.getElementById('fechaInicio').valueAsDate;
+      const ff = document.getElementById('fechaFin').valueAsDate;
+      
+      datosFiltrados = datosOriginales.filter(d => {
+        if (fi && ff) {
+          const dDate = new Date(d.fechaJS.getFullYear(), d.fechaJS.getMonth(), d.fechaJS.getDate());
+          if (dDate < new Date(fi.getFullYear(), fi.getMonth(), fi.getDate()) || dDate > new Date(ff.getFullYear(), ff.getMonth(), ff.getDate())) return false;
+        }
+        
+        for (const campo in filtrosMulti) {
+          const set = filtrosMulti[campo];
+          if (set && set.size > 0) {
+            const valor = (d[campo] || '').toString().trim();
+            if (!set.has(valor)) return false;
+          }
+        }
+        
+        return true;
+      });
+      
+      console.log(`📊 Datos filtrados: ${datosFiltrados.length} registros`);
+      
+      actualizarKPIs();
+      actualizarGraficos();
+      actualizarTablas();
+      
+      try { generarTextoInforme(); } catch (e) { console.error('Error texto:', e); }
+      
+      document.getElementById('fechaGeneracion').textContent = 'Generado el: ' + new Date().toLocaleString('es-ES');
+      document.getElementById('footerFecha').textContent = new Date().toLocaleString('es-ES');
+      
+      hideLoading();
+      toast('✅ Informe generado', 'exito');
+    } catch (e) {
+      console.error('Error:', e);
+      hideLoading();
+      toast('❌ Error: ' + e.message, 'error');
+    }
+  }, 100);
+}
+
+function actualizarKPIs() {
+  document.getElementById('kpiTotal').textContent = datosFiltrados.length.toLocaleString('es-ES');
+  document.getElementById('kpiVehiculos').textContent = new Set(datosFiltrados.map(d => d.vhlo).filter(v => v)).size.toLocaleString('es-ES');
+  
+  const dias = new Set(datosFiltrados.map(d => d.fecha_aviso)).size;
+  document.getElementById('kpiPromedio').textContent = dias ? (datosFiltrados.length / dias).toFixed(1) : '0';
+  
+  const grupos = {};
+  datosFiltrados.forEach(d => {
+    if (d.vhlo && d.deficiencias) {
+      const key = `${d.vhlo}|${d.deficiencias}`;
+      grupos[key] = (grupos[key] || 0) + 1;
+    }
+  });
+  document.getElementById('kpiReiteradas').textContent = Object.values(grupos).filter(v => v >= 3).length.toLocaleString('es-ES');
+  
+  const vc = {};
+  datosFiltrados.forEach(d => { if (d.vhlo) vc[d.vhlo] = (vc[d.vhlo] || 0) + 1; });
+  const topVeh = Object.entries(vc).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById('kpiTopVehiculo').textContent = topVeh ? `${topVeh[0]} (${topVeh[1]})` : '-';
+  
+  const fc = {};
+  datosFiltrados.forEach(d => { if (d.familia_averia) fc[d.familia_averia] = (fc[d.familia_averia] || 0) + 1; });
+  const topFam = Object.entries(fc).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById('kpiTopFamilia').textContent = topFam ? topFam[0] : '-';
+}
+
+function actualizarGraficos() {
+  Object.values(charts).forEach(c => { if (c) c.destroy(); });
+  charts = {};
+  
+  const textColor = getTextColor();
+  const gridColor = getGridColor();
+  
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: textColor, font: { size: 11 } } } }
+  };
+  
+  const scalesOptions = {
+    x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
+    y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+  };
+  
+  const radialPadding = { right: 80, left: 30, top: 30, bottom: 30 };
+  
+  const cntF = {};
+  datosFiltrados.forEach(d => { if (d.familia_averia) cntF[d.familia_averia] = (cntF[d.familia_averia] || 0) + 1; });
+  const sortedF = Object.entries(cntF).sort((a, b) => b[1] - a[1]);
+  
+  const elFamilia = document.getElementById('chartFamilia');
+  if (elFamilia) {
+    charts.familia = new Chart(elFamilia, {
+      type: 'doughnut',
+      data: { labels: sortedF.map(e => e[0]), datasets: [{ data: sortedF.map(e => e[1]), backgroundColor: genColores(sortedF.length) }] },
+      options: { 
+        ...commonOptions, 
+        layout: { padding: radialPadding },
+        plugins: { legend: { position: 'right', labels: { color: textColor, font: { size: 10 } } } } 
+      }
+    });
+  }
+  
+  const cntV = {};
+  datosFiltrados.forEach(d => { if (d.vhlo) cntV[d.vhlo] = (cntV[d.vhlo] || 0) + 1; });
+  const sortedV = Object.entries(cntV).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  
+  const elVehiculos = document.getElementById('chartVehiculos');
+  if (elVehiculos) {
+    charts.vehiculos = new Chart(elVehiculos, {
+      type: 'bar',
+      data: { labels: sortedV.map(e => e[0]), datasets: [{ data: sortedV.map(e => e[1]), backgroundColor: '#00d4aa' }] },
+      options: { ...commonOptions, plugins: { legend: { display: false } }, scales: scalesOptions }
+    });
+  }
+  
+  const cntT = {};
+  datosFiltrados.forEach(d => { if (d.turno) cntT[d.turno] = (cntT[d.turno] || 0) + 1; });
+  const sortedT = Object.entries(cntT).sort((a, b) => b[1] - a[1]);
+  
+  const elTurno = document.getElementById('chartTurno');
+  if (elTurno) {
+    charts.turno = new Chart(elTurno, {
+      type: 'pie',
+      data: { labels: sortedT.map(e => e[0] || 'Sin turno'), datasets: [{ data: sortedT.map(e => e[1]), backgroundColor: ['#00d4aa', '#7c6fe0', '#ffd166', '#ff6b6b'] }] },
+      options: { 
+        ...commonOptions, 
+        layout: { padding: radialPadding },
+        plugins: { legend: { position: 'right', labels: { color: textColor } } } 
+      }
+    });
+  }
+  
+  const cntTO = {};
+  datosFiltrados.forEach(d => {
+    const etiq = getEtiquetaTipoOrden(d.tipo_orden) || 'Otros';
+    cntTO[etiq] = (cntTO[etiq] || 0) + 1;
+  });
+  const sortedTO = Object.entries(cntTO).sort((a, b) => b[1] - a[1]);
+  
+  const elTipoOrden = document.getElementById('chartTipoOrden');
+  if (elTipoOrden) {
+    charts.tipoOrden = new Chart(elTipoOrden, {
+      type: 'pie',
+      data: { labels: sortedTO.map(e => e[0]), datasets: [{ data: sortedTO.map(e => e[1]), backgroundColor: ['#ff6b6b', '#06d6a0', '#118ab2', '#ffd166'] }] },
+      options: { 
+        ...commonOptions, 
+        layout: { padding: radialPadding },
+        plugins: { legend: { position: 'right', labels: { color: textColor } } } 
+      }
+    });
+  }
+  
+  const cntDef = {};
+  datosFiltrados.forEach(d => { if (d.deficiencias) cntDef[d.deficiencias] = (cntDef[d.deficiencias] || 0) + 1; });
+  const sortedDef = Object.entries(cntDef).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  
+  const elDeficiencias = document.getElementById('chartDeficiencias');
+  if (elDeficiencias) {
+    charts.deficiencias = new Chart(elDeficiencias, {
+      type: 'bar',
+      data: { 
+        labels: sortedDef.map(e => e[0].substring(0, 50)), 
+        datasets: [{ data: sortedDef.map(e => e[1]), backgroundColor: '#ef4444' }] 
+      },
+      options: { ...commonOptions, indexAxis: 'y', plugins: { legend: { display: false } }, scales: scalesOptions }
+    });
+  }
+  
+  const cntOrigen = {};
+  datosFiltrados.forEach(d => { if (d.origen_aviso) cntOrigen[d.origen_aviso] = (cntOrigen[d.origen_aviso] || 0) + 1; });
+  const sortedOrigen = Object.entries(cntOrigen).sort((a, b) => b[1] - a[1]);
+  
+  const elOrigen = document.getElementById('chartOrigen');
+  if (elOrigen) {
+    charts.origen = new Chart(elOrigen, {
+      type: 'doughnut',
+      data: { 
+        labels: sortedOrigen.map(e => e[0]), 
+        datasets: [{ data: sortedOrigen.map(e => e[1]), backgroundColor: genColores(sortedOrigen.length) }] 
+      },
+      options: { 
+        ...commonOptions, 
+        layout: { padding: radialPadding },
+        plugins: { legend: { position: 'right', labels: { color: textColor, font: { size: 10 } } } } 
+      }
+    });
+  }
+  
+  const evol = {};
+  datosFiltrados.forEach(d => {
+    const mes = `${d.fechaJS.getFullYear()}-${String(d.fechaJS.getMonth() + 1).padStart(2, '0')}`;
+    evol[mes] = (evol[mes] || 0) + 1;
+  });
+  const lEv = Object.keys(evol).sort();
+  
+  const elEvolucion = document.getElementById('chartEvolucion');
+  if (elEvolucion) {
+    charts.evolucion = new Chart(elEvolucion, {
+      type: 'line',
+      data: {
+        labels: lEv,
+        datasets: [{ label: 'Total averías', data: lEv.map(l => evol[l]), borderColor: '#00d4aa', backgroundColor: 'rgba(0, 212, 170, 0.1)', fill: true, tension: 0.3 }]
+      },
+      options: { ...commonOptions, plugins: { legend: { display: false } }, scales: scalesOptions }
+    });
+  }
+  
+  try {
+    const top6Familias = sortedF.slice(0, 6).map(e => e[0]);
+    const evolFam = {};
+    const datasetsEvolFam = [];
+    
+    datosFiltrados.forEach(d => {
+      if (!top6Familias.includes(d.familia_averia)) return;
+      const mes = `${d.fechaJS.getFullYear()}-${String(d.fechaJS.getMonth() + 1).padStart(2, '0')}`;
+      if (!evolFam[mes]) evolFam[mes] = {};
+      evolFam[mes][d.familia_averia] = (evolFam[mes][d.familia_averia] || 0) + 1;
+    });
+    
+    const mesesEvol = Object.keys(evolFam).sort();
+    top6Familias.forEach((fam, i) => {
+      datasetsEvolFam.push({
+        label: fam,
+        data: mesesEvol.map(m => evolFam[m][fam] || 0),
+        borderColor: PALETA[i],
+        backgroundColor: PALETA[i] + '22',
+        fill: false,
+        tension: 0.3,
+        borderWidth: 2
+      });
+    });
+    
+    const elEvolFam = document.getElementById('chartEvolucionFamilias');
+    if (elEvolFam && mesesEvol.length > 0) {
+      charts.evolucionFamilias = new Chart(elEvolFam, {
+        type: 'line',
+        data: { labels: mesesEvol, datasets: datasetsEvolFam },
+        options: {
+          ...commonOptions,
+          plugins: { legend: { position: 'top', labels: { color: textColor, font: { size: 10 } } } },
+          scales: scalesOptions,
+          interaction: { mode: 'index', intersect: false }
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Error gráfico evolución familias:', e);
+  }
+  
+  const cntD = {};
+  datosFiltrados.forEach(d => {
+    const desc = (d.descripcion_averia || '').trim();
+    if (desc) cntD[desc] = (cntD[desc] || 0) + 1;
+  });
+  const sortedD = Object.entries(cntD).sort((a, b) => b[1] - a[1]).slice(0, 20);
+  
+  const elDescripciones = document.getElementById('chartDescripciones');
+  if (elDescripciones) {
+    charts.descripciones = new Chart(elDescripciones, {
+      type: 'bar',
+      data: { labels: sortedD.map(e => e[0].substring(0, 60)), datasets: [{ data: sortedD.map(e => e[1]), backgroundColor: '#7c6fe0' }] },
+      options: { ...commonOptions, indexAxis: 'y', plugins: { legend: { display: false } }, scales: scalesOptions }
+    });
+  }
+  
+  const datosLat = datosFiltrados.filter(d => d.familia && d.familia.includes('CARGA LATERAL'));
+  const cntL = {};
+  datosLat.forEach(d => { const sub = getSubfamiliaLateral(d.vhlo); if (sub) cntL[sub] = (cntL[sub] || 0) + 1; });
+  const sortedL = Object.entries(cntL).sort((a, b) => b[1] - a[1]);
+  
+  const elCargaLateral = document.getElementById('chartCargaLateral');
+  if (elCargaLateral) {
+    charts.cargaLateral = new Chart(elCargaLateral, {
+      type: 'bar',
+      data: { labels: sortedL.map(e => e[0]), datasets: [{ data: sortedL.map(e => e[1]), backgroundColor: genColores(sortedL.length) }] },
+      options: { ...commonOptions, plugins: { legend: { display: false } }, scales: scalesOptions }
+    });
+  }
+  
+  const datosTra = datosFiltrados.filter(d => d.familia && d.familia.includes('CARGA TRASERA'));
+  const cntTr = {};
+  datosTra.forEach(d => { const sub = getSubfamiliaTrasera(d.vhlo, d.familia); if (sub) cntTr[sub] = (cntTr[sub] || 0) + 1; });
+  const sortedTr = Object.entries(cntTr).sort((a, b) => b[1] - a[1]);
+  
+  const elCargaTrasera = document.getElementById('chartCargaTrasera');
+  if (elCargaTrasera) {
+    charts.cargaTrasera = new Chart(elCargaTrasera, {
+      type: 'bar',
+      data: { labels: sortedTr.map(e => e[0]), datasets: [{ data: sortedTr.map(e => e[1]), backgroundColor: genColores(sortedTr.length) }] },
+      options: { ...commonOptions, plugins: { legend: { display: false } }, scales: scalesOptions }
+    });
+  }
+}
+
+function generarTextoInforme() {
+  const contenedor = document.getElementById('textoInforme');
+  if (!contenedor) return;
+  
+  if (datosFiltrados.length === 0) {
+    contenedor.innerHTML = '<h3>📝 Análisis del Periodo</h3><p>No hay datos en el periodo seleccionado.</p>';
+    return;
+  }
+  
+  const total = datosFiltrados.length;
+  const vehiculosUnicos = new Set(datosFiltrados.map(d => d.vhlo).filter(v => v)).size;
+  const dias = new Set(datosFiltrados.map(d => d.fecha_aviso)).size;
+  const promedio = dias ? (total / dias).toFixed(1) : 0;
+  
+  const cntF = {};
+  datosFiltrados.forEach(d => { if (d.familia_averia) cntF[d.familia_averia] = (cntF[d.familia_averia] || 0) + 1; });
+  const sortedF = Object.entries(cntF).sort((a, b) => b[1] - a[1]);
+  const top3Familias = sortedF.slice(0, 3);
+  
+  const cntV = {};
+  datosFiltrados.forEach(d => { if (d.vhlo) cntV[d.vhlo] = (cntV[d.vhlo] || 0) + 1; });
+  const sortedV = Object.entries(cntV).sort((a, b) => b[1] - a[1]);
+  const top3Vehiculos = sortedV.slice(0, 3);
+  
+  const cntDef = {};
+  datosFiltrados.forEach(d => { if (d.deficiencias) cntDef[d.deficiencias] = (cntDef[d.deficiencias] || 0) + 1; });
+  const sortedDef = Object.entries(cntDef).sort((a, b) => b[1] - a[1]);
+  const top3Deficiencias = sortedDef.slice(0, 3);
+  
+  const cntOrigen = {};
+  datosFiltrados.forEach(d => { if (d.origen_aviso) cntOrigen[d.origen_aviso] = (cntOrigen[d.origen_aviso] || 0) + 1; });
+  const sortedOrigen = Object.entries(cntOrigen).sort((a, b) => b[1] - a[1]);
+  const top3Origen = sortedOrigen.slice(0, 3);
+  
+  const grupos = {};
+  datosFiltrados.forEach(d => {
+    if (d.vhlo && d.deficiencias) {
+      const key = `${d.vhlo}|${d.deficiencias}`;
+      if (!grupos[key]) grupos[key] = { vhlo: d.vhlo, def: d.deficiencias, veces: 0 };
+      grupos[key].veces++;
+    }
+  });
+  const reiteradas = Object.values(grupos).filter(g => g.veces >= 3).sort((a, b) => b.veces - a.veces);
+  const top3Reiteradas = reiteradas.slice(0, 3);
+  
+  const cntTurno = {};
+  datosFiltrados.forEach(d => { if (d.turno) cntTurno[d.turno] = (cntTurno[d.turno] || 0) + 1; });
+  const sortedTurno = Object.entries(cntTurno).sort((a, b) => b[1] - a[1]);
+  const turnoPrincipal = sortedTurno[0];
+  
+  const evol = {};
+  datosFiltrados.forEach(d => {
+    const mes = `${d.fechaJS.getFullYear()}-${String(d.fechaJS.getMonth() + 1).padStart(2, '0')}`;
+    evol[mes] = (evol[mes] || 0) + 1;
+  });
+  const meses = Object.keys(evol).sort();
+  let tendencia = 'estable';
+  if (meses.length >= 2) {
+    const primerMes = evol[meses[0]];
+    const ultimoMes = evol[meses[meses.length - 1]];
+    if (ultimoMes > primerMes * 1.2) tendencia = 'al alza';
+    else if (ultimoMes < primerMes * 0.8) tendencia = 'a la baja';
+  }
+  
+  const cntTO = {};
+  datosFiltrados.forEach(d => {
+    const etiq = getEtiquetaTipoOrden(d.tipo_orden) || 'Otros';
+    cntTO[etiq] = (cntTO[etiq] || 0) + 1;
+  });
+  const sortedTO = Object.entries(cntTO).sort((a, b) => b[1] - a[1]);
+  
+  let html = '<h3>📝 Análisis del Periodo</h3>';
+  
+  html += `<p>En el periodo analizado se han registrado un total de <span class="highlight">${total.toLocaleString('es-ES')} incidencias</span> afectando a <span class="highlight">${vehiculosUnicos} vehículos</span> diferentes, lo que representa un promedio de <span class="highlight">${promedio} averías diarias</span> a lo largo de ${dias} días con actividad.</p>`;
+  
+  if (top3Familias.length > 0) {
+    html += `<p>Las <strong>tres familias de avería más frecuentes</strong> son:</p><ul>`;
+    top3Familias.forEach((f, i) => {
+      const pct = ((f[1] / total) * 100).toFixed(1);
+      html += `<li><strong>${i + 1}. ${f[0]}</strong> con <span class="highlight">${f[1]} incidencias</span> (${pct}%)</li>`;
+    });
+    html += `</ul>`;
+  }
+  
+  if (top3Vehiculos.length > 0) {
+    html += `<p>Los <strong>vehículos con más averías</strong> son:</p><ul>`;
+    top3Vehiculos.forEach((v, i) => {
+      html += `<li><strong>VHLO ${v[0]}</strong> con <span class="highlight">${v[1]} averías</span></li>`;
+    });
+    html += `</ul>`;
+  }
+  
+  if (top3Deficiencias.length > 0) {
+    html += `<p>Las <strong>deficiencias detectadas más frecuentes</strong> son:</p><ul>`;
+    top3Deficiencias.forEach((d, i) => {
+      const pct = ((d[1] / total) * 100).toFixed(1);
+      html += `<li><strong>${i + 1}. ${d[0]}</strong> con <span class="highlight">${d[1]} casos</span> (${pct}%)</li>`;
+    });
+    html += `</ul>`;
+  }
+  
+  if (top3Origen.length > 0) {
+    html += `<p>El <strong>origen de los avisos</strong> se distribuye principalmente en:</p><ul>`;
+    top3Origen.forEach((o, i) => {
+      const pct = ((o[1] / total) * 100).toFixed(1);
+      html += `<li><strong>${i + 1}. ${o[0]}</strong> con <span class="highlight">${o[1]} avisos</span> (${pct}%)</li>`;
+    });
+    html += `</ul>`;
+  }
+  
+  if (reiteradas.length > 0) {
+    html += `<div class="alerta"><strong>⚠️ ALERTA: Se han detectado ${reiteradas.length} combinaciones reiterativas</strong> (Vehículo + Deficiencia que se repiten 3 o más veces).`;
+    if (top3Reiteradas.length > 0) {
+      html += ` Las más críticas son:<ul>`;
+      top3Reiteradas.forEach(r => {
+        html += `<li>VHLO <strong>${r.vhlo}</strong> - ${r.def} (<span class="highlight">${r.veces} veces</span>)</li>`;
+      });
+      html += `</ul></div>`;
+    } else {
+      html += `</div>`;
+    }
+  }
+  
+  if (turnoPrincipal) {
+    const pctTurno = ((turnoPrincipal[1] / total) * 100).toFixed(1);
+    html += `<p>El <strong>turno con más incidencias</strong> es el <span class="highlight">${turnoPrincipal[0]}</span> con ${turnoPrincipal[1]} averías (${pctTurno}%).</p>`;
+  }
+  
+  if (sortedTO.length > 0) {
+    html += `<p>En cuanto al <strong>tipo de orden</strong>:</p><ul>`;
+    sortedTO.slice(0, 3).forEach(t => {
+      const pct = ((t[1] / total) * 100).toFixed(1);
+      html += `<li><strong>${t[0]}</strong>: ${t[1]} casos (${pct}%)</li>`;
+    });
+    html += `</ul>`;
+  }
+  
+  html += `<p>La <strong>tendencia temporal</strong> de averías es <span class="highlight">${tendencia}</span>`;
+  if (meses.length >= 2) {
+    html += `, pasando de ${evol[meses[0]]} averías en ${meses[0]} a ${evol[meses[meses.length - 1]]} en ${meses[meses.length - 1]}`;
+  }
+  html += `.</p>`;
+  
+  html += `<div class="recomendacion"><strong>💡 Recomendaciones:</strong><ul>`;
+  
+  if (top3Vehiculos[0] && top3Vehiculos[0][1] >= 5) {
+    html += `<li>Revisar el vehículo <strong>VHLO ${top3Vehiculos[0][0]}</strong> (${top3Vehiculos[0][1]} averías).</li>`;
+  }
+  
+  if (reiteradas.length > 5) {
+    html += `<li>Analizar las <strong>${reiteradas.length} combinaciones reiterativas</strong> para identificar fallos crónicos.</li>`;
+  }
+  
+  if (top3Deficiencias[0]) {
+    html += `<li>Priorizar la resolución de <strong>"${top3Deficiencias[0][0]}"</strong> (${top3Deficiencias[0][1]} casos, ${((top3Deficiencias[0][1] / total) * 100).toFixed(1)}%).</li>`;
+  }
+  
+  if (top3Familias[0]) {
+    html += `<li>Priorizar acciones en la familia <strong>${top3Familias[0][0]}</strong> (${((top3Familias[0][1] / total) * 100).toFixed(1)}% del total).</li>`;
+  }
+  
+  if (tendencia === 'al alza') {
+    html += `<li>La tendencia es <strong>creciente</strong>, reforzar mantenimiento preventivo.</li>`;
+  } else if (tendencia === 'a la baja') {
+    html += `<li>La tendencia es <strong>decreciente</strong>, las acciones están dando resultados.</li>`;
+  }
+  
+  html += `</ul></div>`;
+  
+  contenedor.innerHTML = html;
+}
+
+function actualizarTablas() {
+  const grupos = {};
+  datosFiltrados.forEach(d => {
+    if (!d.vhlo || !d.deficiencias) return;
+    const key = `${d.vhlo}|${d.deficiencias}`;
+    if (!grupos[key]) grupos[key] = { vhlo: d.vhlo, deficiencias: d.deficiencias, familia_averia: d.familia_averia, veces: 0, primeraFecha: d.fechaJS, ultimaFecha: d.fechaJS };
+    grupos[key].veces++;
+    if (d.fechaJS < grupos[key].primeraFecha) grupos[key].primeraFecha = d.fechaJS;
+    if (d.fechaJS > grupos[key].ultimaFecha) grupos[key].ultimaFecha = d.fechaJS;
+  });
+  
+  const reiteradas = Object.values(grupos).filter(g => g.veces >= 3).sort((a, b) => b.veces - a.veces);
+  document.querySelector('#tablaReiteradas tbody').innerHTML = reiteradas.map(g => `
+    <tr>
+      <td><strong>${g.vhlo}</strong></td><td>${g.deficiencias}</td>
+      <td><span class="badge-veces" style="background:${getColorVeces(g.veces)}">${g.veces}</span></td>
+      <td>${g.familia_averia}</td><td>${formatearFecha(g.primeraFecha)}</td><td>${formatearFecha(g.ultimaFecha)}</td>
+    </tr>`).join('');
+  
+  const famStats = {};
+  datosFiltrados.forEach(d => {
+    if (!d.familia) return;
+    if (!famStats[d.familia]) famStats[d.familia] = { total: 0, vehiculos: new Set() };
+    famStats[d.familia].total++;
+    if (d.vhlo) famStats[d.familia].vehiculos.add(d.vhlo);
+  });
+  
+  const total = datosFiltrados.length;
+  const famArray = Object.entries(famStats).map(([fam, s]) => ({
+    familia: fam, total: s.total, vehiculos: s.vehiculos.size,
+    media: (s.total / s.vehiculos.size).toFixed(1), porcentaje: ((s.total / total) * 100).toFixed(1)
+  })).sort((a, b) => b.total - a.total);
+  
+  document.querySelector('#tablaFamilias tbody').innerHTML = famArray.map(f => `
+    <tr><td><strong>${f.familia}</strong></td><td>${f.total.toLocaleString('es-ES')}</td><td>${f.vehiculos}</td><td>${f.media}</td><td>${f.porcentaje}%</td></tr>
+  `).join('');
+}
+
+function exportarDOC() {
+  showLoading('Generando documento Word...');
+  
+  try {
+    const fecha = new Date().toLocaleString('es-ES');
+    const fi = document.getElementById('fechaInicio').value || 'N/A';
+    const ff = document.getElementById('fechaFin').value || 'N/A';
+    
+    let filtrosTexto = '';
+    Object.entries(filtrosMulti).forEach(([campo, set]) => {
+      if (set && set.size > 0) {
+        filtrosTexto += `<li><strong>${NOMBRES_CAMPOS[campo]}:</strong> ${set.size} seleccionados - ${[...set].slice(0, 5).join(', ')}${set.size > 5 ? '...' : ''}</li>`;
+      }
+    });
+    
+    let html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+            xmlns:w='urn:schemas-microsoft-com:office:word' 
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>Informe de Averías</title>
+        <style>
+          @page { size: A4; margin: 2cm; }
+          body { font-family: 'Calibri', Arial, sans-serif; font-size: 11pt; color: #333; line-height: 1.5; }
+          h1 { color: #14b8a6; font-size: 24pt; text-align: center; margin-bottom: 5pt; }
+          h2 { color: #14b8a6; font-size: 16pt; border-bottom: 2px solid #14b8a6; padding-bottom: 5pt; margin-top: 20pt; }
+          h3 { color: #14b8a6; font-size: 13pt; margin-top: 15pt; }
+          .portada { text-align: center; padding: 40pt 0; border-bottom: 3px solid #14b8a6; margin-bottom: 30pt; }
+          .portada h1 { font-size: 28pt; margin-bottom: 10pt; }
+          .portada .subtitulo { font-size: 14pt; color: #666; }
+          .portada .fecha { font-size: 11pt; color: #888; margin-top: 15pt; }
+          table { border-collapse: collapse; width: 100%; margin: 10pt 0; font-size: 10pt; }
+          th { background-color: #14b8a6; color: white; padding: 8pt; text-align: left; font-weight: bold; }
+          td { padding: 6pt 8pt; border: 1px solid #ddd; }
+          tr:nth-child(even) td { background-color: #f9f9f9; }
+          .kpi-table { width: 100%; margin: 15pt 0; }
+          .kpi-table td { padding: 10pt; text-align: center; border: 1px solid #ddd; background-color: #f0f9f8; }
+          .kpi-table .valor { font-size: 18pt; font-weight: bold; color: #14b8a6; display: block; }
+          .kpi-table .etiqueta { font-size: 9pt; color: #666; text-transform: uppercase; }
+          .alerta { background-color: #fef2f2; border-left: 4pt solid #ef4444; padding: 10pt; margin: 10pt 0; }
+          .recomendacion { background-color: #f0fdf4; border-left: 4pt solid #10b981; padding: 10pt; margin: 10pt 0; }
+          .highlight { background-color: #e6fffa; padding: 2pt 6pt; font-weight: bold; color: #14b8a6; }
+          ul { margin: 8pt 0; padding-left: 20pt; }
+          li { margin-bottom: 4pt; }
+          .filtros-box { background-color: #f0f9f8; border: 1pt solid #14b8a6; padding: 10pt; margin: 10pt 0; border-radius: 4pt; }
+          .pie-pagina { text-align: center; font-size: 9pt; color: #999; margin-top: 30pt; border-top: 1pt solid #ddd; padding-top: 10pt; }
+        </style>
+      </head>
+      <body>
+        <div class="portada">
+          <h1>INFORME GENERAL DE AVERÍAS</h1>
+          <div class="subtitulo">Parques Auxiliares · Unidad Control Tráfico</div>
+          <div class="fecha">Generado el: ${fecha}</div>
+          <div class="fecha">Periodo analizado: ${fi} al ${ff}</div>
+        </div>
+        
+        ${filtrosTexto ? `<h2>Filtros Aplicados</h2><div class="filtros-box"><ul>${filtrosTexto}</ul></div>` : ''}
+        
+        <h2>Resumen Ejecutivo</h2>
+        <table class="kpi-table">
+          <tr>
+            <td><span class="valor">${document.getElementById('kpiTotal').textContent}</span><span class="etiqueta">Total Incidencias</span></td>
+            <td><span class="valor">${document.getElementById('kpiVehiculos').textContent}</span><span class="etiqueta">Vehículos Afectados</span></td>
+            <td><span class="valor">${document.getElementById('kpiPromedio').textContent}</span><span class="etiqueta">Promedio Diario</span></td>
+          </tr>
+          <tr>
+            <td><span class="valor">${document.getElementById('kpiReiteradas').textContent}</span><span class="etiqueta">Combinaciones Reiteradas</span></td>
+            <td><span class="valor">${document.getElementById('kpiTopVehiculo').textContent}</span><span class="etiqueta">Vehículo Top</span></td>
+            <td><span class="valor">${document.getElementById('kpiTopFamilia').textContent}</span><span class="etiqueta">Familia Avería Top</span></td>
+          </tr>
+        </table>
+        
+        <h2>Análisis del Periodo</h2>
+        ${document.getElementById('textoInforme').innerHTML}
+        
+        <h2>Averías Reiterativas (3 o más apariciones)</h2>
+        ${document.getElementById('tablaReiteradas').outerHTML}
+        
+        <h2>Análisis por Familia de Vehículo</h2>
+        ${document.getElementById('tablaFamilias').outerHTML}
+        
+        <div class="pie-pagina">
+          Informe generado automáticamente · Control Tráfico - Parques Auxiliares<br>
+          ${fecha}
+        </div>
+      </body>
+      </html>
+    `;
+    
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fechaArchivo = new Date().toISOString().split('T')[0];
+    a.download = `informe_averias_${fechaArchivo}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    hideLoading();
+    toast('✅ Documento Word descargado', 'exito');
+    
+  } catch (e) {
+    console.error('Error generando DOC:', e);
+    hideLoading();
+    toast('❌ Error: ' + e.message, 'error');
+  }
+}
+
+async function exportarPDF() {
+  showLoading('Generando PDF...', 'Preparando gráficos...');
+  
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+    let y = margin;
+    
+    const BG_OSCURO = [15, 15, 26];
+    const BG_SECUNDARIO = [30, 30, 45];
+    const TEXTO_CLARO = [224, 224, 224];
+    const TEXTO_SUAVE = [160, 160, 170];
+    const ACCENT = [0, 212, 170];
+    
+    function checkNewPage(neededHeight) {
+      if (y + neededHeight > pageHeight - margin) {
+        pdf.addPage();
+        y = margin;
+        pdf.setFillColor(...BG_OSCURO);
+        pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+      }
+    }
+    
+    pdf.setFillColor(...BG_OSCURO);
+    pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+    
+    pdf.setFillColor(...ACCENT);
+    pdf.rect(0, 0, pageWidth, 60, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(24);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('INFORME GENERAL DE AVERÍAS', pageWidth / 2, 30, { align: 'center' });
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Parques Auxiliares - Unidad Control Tráfico', pageWidth / 2, 45, { align: 'center' });
+    
+    y = 75;
+    pdf.setTextColor(...TEXTO_CLARO);
+    pdf.setFontSize(10);
+    pdf.text(`Fecha generación: ${new Date().toLocaleString('es-ES')}`, margin, y);
+    const fi = document.getElementById('fechaInicio').value;
+    const ff = document.getElementById('fechaFin').value;
+    pdf.text(`Periodo analizado: ${fi || 'N/A'} al ${ff || 'N/A'}`, margin, y + 6);
+    y += 12;
+    
+    const filtrosActivosList = [];
+    Object.entries(filtrosMulti).forEach(([campo, set]) => {
+      if (set && set.size > 0) {
+        filtrosActivosList.push(`${NOMBRES_CAMPOS[campo]}: ${set.size} seleccionados`);
+      }
+    });
+    if (filtrosActivosList.length > 0) {
+      pdf.setFontSize(9);
+      pdf.setTextColor(...TEXTO_SUAVE);
+      pdf.text('Filtros aplicados: ' + filtrosActivosList.join(' · '), margin, y);
+      y += 8;
+    }
+    
+    pdf.setFillColor(...BG_SECUNDARIO);
+    pdf.roundedRect(margin, y, contentWidth, 35, 2, 2, 'F');
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...ACCENT);
+    pdf.text('RESUMEN EJECUTIVO', margin + 5, y + 8);
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    
+    const kpis = [
+      ['Total Incidencias:', document.getElementById('kpiTotal').textContent],
+      ['Vehículos Afectados:', document.getElementById('kpiVehiculos').textContent],
+      ['Promedio Diario:', document.getElementById('kpiPromedio').textContent],
+      ['Combinaciones Reiteradas:', document.getElementById('kpiReiteradas').textContent],
+      ['Vehículo Top:', document.getElementById('kpiTopVehiculo').textContent],
+      ['Familia Avería Top:', document.getElementById('kpiTopFamilia').textContent]
+    ];
+    
+    kpis.forEach((kpi, i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const x = margin + 5 + (col * (contentWidth / 3));
+      const yPos = y + 18 + (row * 8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...TEXTO_SUAVE);
+      pdf.text(kpi[0], x, yPos);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...ACCENT);
+      pdf.text(kpi[1], x + pdf.getTextWidth(kpi[0]) + 2, yPos);
+    });
+    
+    y += 45;
+    
+    try {
+      checkNewPage(40);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...ACCENT);
+      pdf.text('ANÁLISIS DEL PERIODO', margin, y);
+      y += 8;
+      
+      const textoContenido = document.getElementById('textoInforme');
+      if (textoContenido) {
+        const lineasTexto = [];
+        textoContenido.querySelectorAll('p, li').forEach(el => {
+          const texto = el.textContent.trim();
+          if (texto && texto.length > 0) lineasTexto.push(texto);
+        });
+        
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(...TEXTO_CLARO);
+        
+        const lineasUnicas = [...new Set(lineasTexto)];
+        lineasUnicas.forEach(linea => {
+          const lineasDivididas = pdf.splitTextToSize(linea, contentWidth - 10);
+          lineasDivididas.forEach(l => {
+            checkNewPage(6);
+            pdf.text(l, margin + 5, y);
+            y += 5;
+          });
+          y += 1;
+        });
+        y += 5;
+      }
+    } catch (e) {
+      console.error('Error texto PDF:', e);
+    }
+    
+    const graficosConfig = [
+      { chart: 'familia', titulo: 'Distribución por Familia de Avería', type: 'pie' },
+      { chart: 'vehiculos', titulo: 'Top 15 Vehículos con Más Averías', type: 'bar' },
+      { chart: 'turno', titulo: 'Distribución por Turno', type: 'pie' },
+      { chart: 'tipoOrden', titulo: 'Tipo de Orden', type: 'pie' },
+      { chart: 'deficiencias', titulo: 'Top 15 Deficiencias Detectadas', type: 'bar-h' },
+      { chart: 'origen', titulo: 'Distribución por Origen de Aviso', type: 'pie' },
+      { chart: 'evolucion', titulo: 'Evolución Mensual de Averías', type: 'line' },
+      { chart: 'evolucionFamilias', titulo: 'Evolución Mensual por Familia', type: 'line-multi' },
+      { chart: 'descripciones', titulo: 'Top 20 Descripciones de Avería', type: 'bar-h' },
+      { chart: 'cargaLateral', titulo: 'Carga Lateral - Subfamilias', type: 'bar' },
+      { chart: 'cargaTrasera', titulo: 'Carga Trasera - Subfamilias', type: 'bar' }
+    ];
+    
+    for (let i = 0; i < graficosConfig.length; i++) {
+      const cfg = graficosConfig[i];
+      showLoading('Generando PDF...', `Gráfico ${i + 1}/${graficosConfig.length}`);
+      
+      if (!charts[cfg.chart]) continue;
+      
+      try {
+        const chartImg = charts[cfg.chart].toBase64Image('image/png', 1.0);
+        
+        checkNewPage(50);
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...ACCENT);
+        pdf.text(cfg.titulo, margin, y);
+        y += 6;
+        
+        let imgWidth = contentWidth;
+        let imgHeight = cfg.type === 'bar-h' ? 100 : (cfg.type.includes('pie') ? 80 : 70);
+        
+        checkNewPage(imgHeight + 10);
+        pdf.addImage(chartImg, 'PNG', margin, y, imgWidth, imgHeight);
+        y += imgHeight + 10;
+        
+      } catch (err) {
+        console.error(`Error gráfico ${cfg.chart}:`, err);
+      }
+    }
+    
+    checkNewPage(30);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...ACCENT);
+    pdf.text('Averías Reiterativas (3 o más apariciones)', margin, y);
+    y += 8;
+    
+    const reiteradas = [];
+    document.querySelectorAll('#tablaReiteradas tbody tr').forEach(tr => {
+      const cells = tr.querySelectorAll('td');
+      if (cells.length >= 6) {
+        reiteradas.push([
+          cells[0].textContent.trim(),
+          cells[1].textContent.trim().substring(0, 40),
+          cells[2].textContent.trim(),
+          cells[3].textContent.trim(),
+          cells[4].textContent.trim(),
+          cells[5].textContent.trim()
+        ]);
+      }
+    });
+    
+    if (reiteradas.length > 0) {
+      pdf.setFillColor(...ACCENT);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      const headers = ['VHLO', 'Deficiencia', 'Veces', 'Familia', 'Primera', 'Última'];
+      const colWidths = [18, 65, 15, 35, 22, 22];
+      let x = margin;
+      headers.forEach((h, i) => {
+        pdf.rect(x, y, colWidths[i], 6, 'F');
+        pdf.text(h, x + 1, y + 4);
+        x += colWidths[i];
+      });
+      y += 6;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...TEXTO_CLARO);
+      reiteradas.slice(0, 30).forEach((row, idx) => {
+        checkNewPage(8);
+        if (idx % 2 === 0) {
+          pdf.setFillColor(...BG_SECUNDARIO);
+          pdf.rect(margin, y, contentWidth, 6, 'F');
+        }
+        let x = margin;
+        row.forEach((cell, i) => {
+          pdf.text(String(cell).substring(0, 30), x + 1, y + 4);
+          x += colWidths[i];
+        });
+        y += 6;
+      });
+      y += 5;
+    }
+    
+    checkNewPage(30);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...ACCENT);
+    pdf.text('Análisis por Familia de Vehículo', margin, y);
+    y += 8;
+    
+    const familias = [];
+    document.querySelectorAll('#tablaFamilias tbody tr').forEach(tr => {
+      const cells = tr.querySelectorAll('td');
+      if (cells.length >= 5) {
+        familias.push([
+          cells[0].textContent.trim(),
+          cells[1].textContent.trim(),
+          cells[2].textContent.trim(),
+          cells[3].textContent.trim(),
+          cells[4].textContent.trim()
+        ]);
+      }
+    });
+    
+    if (familias.length > 0) {
+      pdf.setFillColor(...ACCENT);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      const headers = ['Familia', 'Total', 'Vehículos', 'Media', '% Total'];
+      const colWidths = [55, 25, 25, 25, 25];
+      let x = margin;
+      headers.forEach((h, i) => {
+        pdf.rect(x, y, colWidths[i], 6, 'F');
+        pdf.text(h, x + 1, y + 4);
+        x += colWidths[i];
+      });
+      y += 6;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...TEXTO_CLARO);
+      familias.forEach((row, idx) => {
+        checkNewPage(8);
+        if (idx % 2 === 0) {
+          pdf.setFillColor(...BG_SECUNDARIO);
+          pdf.rect(margin, y, contentWidth, 6, 'F');
+        }
+        let x = margin;
+        row.forEach((cell, i) => {
+          pdf.text(String(cell).substring(0, 30), x + 1, y + 4);
+          x += colWidths[i];
+        });
+        y += 6;
+      });
+    }
+    
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(8);
+      pdf.setTextColor(...TEXTO_SUAVE);
+      pdf.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+      pdf.text('Control Tráfico - Parques Auxiliares', margin, pageHeight - 8);
+    }
+    
+    const fechaArchivo = new Date().toISOString().split('T')[0];
+    pdf.save(`informe_averias_${fechaArchivo}.pdf`);
+    
+    hideLoading();
+    toast('✅ PDF oscuro descargado', 'exito');
+    
+  } catch (e) {
+    console.error('Error PDF:', e);
+    hideLoading();
+    toast('❌ Error: ' + e.message, 'error');
+  }
+}
+
+function exportarExcel() {
+  showLoading('Generando Excel...');
+  try {
+    const wb = XLSX.utils.book_new();
+    
+    const resumen = [
+      ['INFORME DE AVERÍAS - PARQUES AUXILIARES'],
+      ['Generado:', new Date().toLocaleString('es-ES')],
+      ['Periodo:', document.getElementById('fechaInicio').value + ' a ' + document.getElementById('fechaFin').value],
+      [], ['RESUMEN EJECUTIVO'],
+      ['Total Incidencias', datosFiltrados.length],
+      ['Vehículos Afectados', new Set(datosFiltrados.map(d => d.vhlo)).size],
+      ['Promedio Diario', document.getElementById('kpiPromedio').textContent],
+      ['Combinaciones Reiteradas', document.getElementById('kpiReiteradas').textContent],
+      ['Vehículo Top', document.getElementById('kpiTopVehiculo').textContent],
+      ['Familia Avería Top', document.getElementById('kpiTopFamilia').textContent],
+      [], ['FILTROS APLICADOS']
+    ];
+    
+    Object.entries(filtrosMulti).forEach(([campo, set]) => {
+      if (set && set.size > 0) {
+        resumen.push([NOMBRES_CAMPOS[campo], set.size + ' seleccionados', [...set].join(', ')]);
+      }
+    });
+    
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
+    
+    try {
+      const analisisTexto = document.getElementById('textoInforme').innerText;
+      const lineasAnalisis = analisisTexto.split('\n').filter(l => l.trim()).map(l => [l.trim()]);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['ANÁLISIS DEL PERIODO'], ...lineasAnalisis]), 'Análisis');
+    } catch (e) {}
+    
+    const datosExcel = datosFiltrados.map(d => ({
+      'Fecha': d.fecha_aviso, 'Turno': d.turno, 'VHLO': d.vhlo, 'Familia': d.familia,
+      'Conductor': d.conductor, 'Familia Avería': d.familia_averia, 'Deficiencias': d.deficiencias,
+      'Descripción': d.descripcion_averia, 'Origen': d.origen_aviso, 'Tipo Orden': d.tipo_orden, 'Nº Aviso': d.n_aviso
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datosExcel), 'Incidencias');
+    
+    const cntDef = {};
+    datosFiltrados.forEach(d => { if (d.deficiencias) cntDef[d.deficiencias] = (cntDef[d.deficiencias] || 0) + 1; });
+    const defArray = Object.entries(cntDef).map(([def, count]) => ({
+      'Deficiencia': def, 'Total': count, '% del Total': ((count / datosFiltrados.length) * 100).toFixed(1) + '%'
+    })).sort((a, b) => b.Total - a.Total);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(defArray), 'Deficiencias');
+    
+    const cntOrigen = {};
+    datosFiltrados.forEach(d => { if (d.origen_aviso) cntOrigen[d.origen_aviso] = (cntOrigen[d.origen_aviso] || 0) + 1; });
+    const origenArray = Object.entries(cntOrigen).map(([origen, count]) => ({
+      'Origen': origen, 'Total': count, '% del Total': ((count / datosFiltrados.length) * 100).toFixed(1) + '%'
+    })).sort((a, b) => b.Total - a.Total);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(origenArray), 'Origen Aviso');
+    
+    const grupos = {};
+    datosFiltrados.forEach(d => {
+      if (!d.vhlo || !d.deficiencias) return;
+      const key = `${d.vhlo}|${d.deficiencias}`;
+      if (!grupos[key]) grupos[key] = { vhlo: d.vhlo, deficiencias: d.deficiencias, familia_averia: d.familia_averia, veces: 0, primera: d.fechaJS, ultima: d.fechaJS };
+      grupos[key].veces++;
+      if (d.fechaJS < grupos[key].primera) grupos[key].primera = d.fechaJS;
+      if (d.fechaJS > grupos[key].ultima) grupos[key].ultima = d.fechaJS;
+    });
+    const reiteradas = Object.values(grupos).filter(g => g.veces >= 3).map(g => ({
+      'VHLO': g.vhlo, 'Deficiencia': g.deficiencias, 'Veces': g.veces,
+      'Familia Avería': g.familia_averia, 'Primera vez': formatearFecha(g.primera), 'Última vez': formatearFecha(g.ultima)
+    })).sort((a, b) => b.Veces - a.Veces);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reiteradas), 'Reiteradas');
+    
+    const famStats = {};
+    datosFiltrados.forEach(d => {
+      if (!d.familia) return;
+      if (!famStats[d.familia]) famStats[d.familia] = { total: 0, vehiculos: new Set() };
+      famStats[d.familia].total++;
+      if (d.vhlo) famStats[d.familia].vehiculos.add(d.vhlo);
+    });
+    const total = datosFiltrados.length;
+    const famArray = Object.entries(famStats).map(([fam, s]) => ({
+      'Familia': fam, 'Total Averías': s.total, 'Vehículos Únicos': s.vehiculos.size,
+      'Media/Vehículo': (s.total / s.vehiculos.size).toFixed(1), '% del Total': ((s.total / total) * 100).toFixed(1) + '%'
+    })).sort((a, b) => b['Total Averías'] - a['Total Averías']);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(famArray), 'Por Familia');
+    
+    XLSX.writeFile(wb, `informe_averias_${new Date().toISOString().split('T')[0]}.xlsx`);
+    hideLoading();
+    toast('✅ Excel descargado', 'exito');
+  } catch (e) {
+    console.error('Error:', e);
+    hideLoading();
+    toast('❌ Error: ' + e.message, 'error');
+  }
+}
+
+document.getElementById('fechaInicio').addEventListener('change', generarInforme);
+document.getElementById('fechaFin').addEventListener('change', generarInforme);
+
+cargarDatos();
+</script>
+
+</body>
+</html>

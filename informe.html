@@ -1437,6 +1437,49 @@ function exportarDOC() {
     const fi = document.getElementById('fechaInicio').value || 'N/A';
     const ff = document.getElementById('fechaFin').value || 'N/A';
     
+    // ✅ NUEVO: Capturar imágenes de todos los gráficos en base64
+    const graficosImagenes = {};
+    const graficosConfig = [
+      { chart: 'familia', titulo: 'Distribución por Familia de Avería' },
+      { chart: 'vehiculos', titulo: 'Top 15 Vehículos con Más Averías' },
+      { chart: 'turno', titulo: 'Distribución por Turno' },
+      { chart: 'tipoOrden', titulo: 'Tipo de Orden' },
+      { chart: 'deficiencias', titulo: 'Top 15 Deficiencias Detectadas' },
+      { chart: 'origen', titulo: 'Distribución por Origen de Aviso' },
+      { chart: 'evolucion', titulo: 'Evolución Mensual de Averías' },
+      { chart: 'evolucionFamilias', titulo: 'Evolución Mensual por Familia' },
+      { chart: 'descripciones', titulo: 'Top 20 Descripciones de Avería' },
+      { chart: 'cargaLateral', titulo: 'Carga Lateral - Subfamilias' },
+      { chart: 'cargaTrasera', titulo: 'Carga Trasera - Subfamilias' }
+    ];
+    
+    // ✅ Capturar cada gráfico como imagen base64
+    graficosConfig.forEach(cfg => {
+      if (charts[cfg.chart]) {
+        try {
+          graficosImagenes[cfg.chart] = {
+            titulo: cfg.titulo,
+            img: charts[cfg.chart].toBase64Image('image/png', 1.0)
+          };
+        } catch (e) {
+          console.error(`Error capturando gráfico ${cfg.chart}:`, e);
+        }
+      }
+    });
+    
+    // ✅ Generar HTML de los gráficos
+    let htmlGraficos = '';
+    graficosConfig.forEach(cfg => {
+      if (graficosImagenes[cfg.chart]) {
+        htmlGraficos += `
+          <h3>${cfg.titulo}</h3>
+          <p style="text-align:center;">
+            <img src="${graficosImagenes[cfg.chart].img}" style="max-width:100%; width:550pt; height:auto;" />
+          </p>
+        `;
+      }
+    });
+    
     let filtrosTexto = '';
     Object.entries(filtrosMulti).forEach(([campo, set]) => {
       if (set && set.size > 0) {
@@ -1451,6 +1494,15 @@ function exportarDOC() {
       <head>
         <meta charset='utf-8'>
         <title>Informe de Averías</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
         <style>
           @page { size: A4; margin: 2cm; }
           body { font-family: 'Calibri', Arial, sans-serif; font-size: 11pt; color: #333; line-height: 1.5; }
@@ -1475,13 +1527,15 @@ function exportarDOC() {
           ul { margin: 8pt 0; padding-left: 20pt; }
           li { margin-bottom: 4pt; }
           .filtros-box { background-color: #f0f9f8; border: 1pt solid #14b8a6; padding: 10pt; margin: 10pt 0; border-radius: 4pt; }
+          .grafico-container { text-align: center; margin: 15pt 0; page-break-inside: avoid; }
+          .grafico-container img { max-width: 100%; border: 1pt solid #e0e0e0; border-radius: 4pt; }
           .pie-pagina { text-align: center; font-size: 9pt; color: #999; margin-top: 30pt; border-top: 1pt solid #ddd; padding-top: 10pt; }
         </style>
       </head>
       <body>
         <div class="portada">
           <h1>INFORME GENERAL DE AVERÍAS</h1>
-          <div class="subtitulo">Parques Auxiliares · Unidad Control Tráfico</div>
+          <div class="subtitulo">Parque Central · Unidad Control Tráfico</div>
           <div class="fecha">Generado el: ${fecha}</div>
           <div class="fecha">Periodo analizado: ${fi} al ${ff}</div>
         </div>
@@ -1505,6 +1559,9 @@ function exportarDOC() {
         <h2>Análisis del Periodo</h2>
         ${document.getElementById('textoInforme').innerHTML}
         
+        <h2>Gráficos</h2>
+        ${htmlGraficos}
+        
         <h2>Análisis por Familia de Vehículo</h2>
         ${document.getElementById('tablaFamilias').outerHTML}
         
@@ -1512,7 +1569,7 @@ function exportarDOC() {
         ${document.getElementById('tablaReiteradas').outerHTML}
         
         <div class="pie-pagina">
-          Informe generado automáticamente · Control Tráfico - Parques Auxiliares<br>
+          Informe generado automáticamente · Control Tráfico - Parque Central<br>
           ${fecha}
         </div>
       </body>
@@ -1531,7 +1588,7 @@ function exportarDOC() {
     URL.revokeObjectURL(url);
     
     hideLoading();
-    toast('✅ Documento Word descargado', 'exito');
+    toast('✅ Documento Word descargado con gráficos', 'exito');
     
   } catch (e) {
     console.error('Error generando DOC:', e);

@@ -67,7 +67,6 @@
   .filtro-tag:hover { opacity: 0.8; }
   .filtro-tag.filtro-excluido { background: var(--accent4) !important; color: #ffffff !important; }
   
-  /* ✅ SELECCIÓN MÚLTIPLE */
   .fila-seleccionada td { background: rgba(20, 184, 166, 0.15) !important; }
   .fila-seleccionada td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
   .checkbox-seleccion { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
@@ -91,14 +90,12 @@
     padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px;
   }
   .btn-cancelar-sel:hover { background: var(--bg3); }
-  /* ✅ NUEVO: Botón editar selección */
   .btn-editar-sel {
     background: var(--accent3); color: white; border: none; padding: 8px 16px;
     border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s;
   }
   .btn-editar-sel:hover { opacity: 0.85; transform: translateY(-1px); }
   
-  /* ✅ NUEVO: Modal de edición masiva */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99998;
     display: none; align-items: center; justify-content: center;
@@ -122,7 +119,6 @@
   .modal-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--accent3); margin-bottom: 16px; }
   .modal-info strong { color: var(--text); }
   
-  /* ✅ NUEVO: Indicador visual de celdas en modo edición masiva */
   td.celda-editable-masiva { position: relative; }
   td.celda-editable-masiva::before {
     content: '✏️'; position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
@@ -215,10 +211,8 @@
   </div>
 </div>
 
-<!-- Menú de columnas -->
 <div class="col-menu" id="colMenu"></div>
 
-<!-- ✅ Barra flotante de selección múltiple -->
 <div class="barra-seleccion" id="barraSeleccion">
   <span class="contador-sel"><strong id="contadorSel">0</strong> filas seleccionadas</span>
   <button class="btn-editar-sel" onclick="abrirModalEdicionMasiva()">✏️ Editar selección</button>
@@ -226,7 +220,6 @@
   <button class="btn-cancelar-sel" onclick="cancelarSeleccion()">✕ Cancelar</button>
 </div>
 
-<!-- ✅ NUEVO: Modal de edición masiva -->
 <div class="modal-overlay" id="modalEdicionMasiva">
   <div class="modal-content">
     <h3>✏️ Editar campo en filas seleccionadas</h3>
@@ -258,7 +251,7 @@
   </div>
 </div>
 
-<script src="supabase-config.js"></script>
+<script src="supabase-configINCIDENCIAS.js"></script>
 
 <script>
 let tablaDT;
@@ -270,7 +263,6 @@ let exclusiones = {};
 let historial = [];
 let historialIdx = -1;
 
-// ✅ SELECCIÓN MÚLTIPLE
 let idsSeleccionados = new Set();
 let ultimaFilaClick = null;
 
@@ -279,9 +271,6 @@ const ETIQUETA_AVERIA = 'Avería';
 
 if (!modoOscuro) document.body.classList.add('light-mode');
 
-// ═══════════════════════════════════════════════════════════════
-// FUNCIONES AUXILIARES
-// ═══════════════════════════════════════════════════════════════
 function getEtiquetaTipoOrden(codigo) {
   const cod = (codigo || '').toString().trim().toUpperCase();
   if (!cod || cod === '****') return null;
@@ -329,9 +318,6 @@ function toast(texto, tipo = 'info') {
   setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CARGAR DATOS
-// ═══════════════════════════════════════════════════════════════
 async function cargarDatos() {
   try {
     document.getElementById('totalRegistros').textContent = '...';
@@ -385,19 +371,30 @@ async function cargarDatos() {
   }
 }
 
+// ✅ CAMBIO 2: Parseo robusto de fechas para el calendario
 function inicializarFechas() {
   if (datosOriginales.length === 0) return;
   
   const fechas = datosOriginales
     .map(d => {
       if (!d.fecha_aviso) return null;
-      const parts = d.fecha_aviso.split('/').map(Number);
-      if (parts.length === 3 && !parts.some(isNaN)) {
-        return new Date(parts[2], parts[1] - 1, parts[0]);
+      let fecha = null;
+      if (d.fecha_aviso.includes('/')) {
+        const parts = d.fecha_aviso.split('/').map(Number);
+        if (parts.length === 3 && !parts.some(isNaN)) {
+          fecha = new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+      } else if (d.fecha_aviso.includes('-')) {
+        const parts = d.fecha_aviso.split('-').map(Number);
+        if (parts.length === 3 && !parts.some(isNaN)) {
+          fecha = new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+      } else {
+        fecha = new Date(d.fecha_aviso);
       }
-      return null;
+      return (fecha && !isNaN(fecha)) ? fecha : null;
     })
-    .filter(f => f && !isNaN(f));
+    .filter(f => f !== null);
   
   if (fechas.length === 0) return;
   
@@ -408,9 +405,6 @@ function inicializarFechas() {
   document.getElementById('fechaFin').valueAsDate = maxFecha;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// INICIALIZAR TABLA
-// ═══════════════════════════════════════════════════════════════
 function inicializarTabla() {
   tablaDT = $('#tablaIncidencias').DataTable({
     data: [],
@@ -421,7 +415,32 @@ function inicializarTabla() {
         }
       },
       { title: 'ID', data: 'id', width: '60px' },
-      { title: 'Fecha Aviso', data: 'fecha_aviso', width: '100px' },
+      // ✅ CAMBIO 1: Render para ordenar por timestamp (infalible)
+      { 
+        title: 'Fecha Aviso', 
+        data: 'fecha_aviso', 
+        width: '100px',
+        render: function(data, type, row) {
+          if (type === 'sort' || type === 'type') {
+            if (!data) return '00000000';
+            let fecha = null;
+            if (String(data).includes('/')) {
+              const parts = String(data).split('/').map(Number);
+              if (parts.length === 3) fecha = new Date(parts[2], parts[1]-1, parts[0]);
+            } else if (String(data).includes('-')) {
+              const parts = String(data).split('-').map(Number);
+              if (parts.length === 3) fecha = new Date(parts[0], parts[1]-1, parts[2]);
+            } else {
+              fecha = new Date(data);
+            }
+            if (fecha && !isNaN(fecha)) {
+              return fecha.getTime();
+            }
+            return data;
+          }
+          return data || '-';
+        }
+      },
       { title: 'Hora', data: 'hora', width: '70px' },
       { title: 'Turno', data: 'turno', width: '70px' },
       { title: 'VHLO', data: 'vhlo', width: '80px' },
@@ -453,7 +472,7 @@ function inicializarTabla() {
     scrollX: true,
     pageLength: 25,
     lengthChange: true,
-    order: [[1, 'desc']],
+    order: [[2, 'desc']], // Ordenar por defecto por Fecha Aviso descendente
     dom: '<"top"lf>rt<"bottom"ip><"clear">',
     language: {
       search: 'Buscar:',
@@ -472,9 +491,6 @@ function inicializarTabla() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// INPUT DE PÁGINA MANUAL
-// ═══════════════════════════════════════════════════════════════
 function crearInputPaginaManual() {
   const paginacion = document.querySelector('#tablaIncidencias_paginate');
   if (!paginacion) return;
@@ -535,9 +551,6 @@ $('#tablaIncidencias').on('draw.dt', function() {
   setTimeout(crearInputPaginaManual, 100);
 });
 
-// ═══════════════════════════════════════════════════════════════
-// ✅ EDICIÓN DE CELDAS (individual o masiva si hay selección)
-// ═══════════════════════════════════════════════════════════════
 $('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)', function(e) {
   const celda = $(this);
   if (celda.find('input').length > 0) return;
@@ -552,7 +565,6 @@ $('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)'
   const campo = campos[colIdx];
   if (!campo || campo === '_') return;
   
-  // ✅ Si hay filas seleccionadas Y esta fila NO está seleccionada → preguntar si editar todas
   if (idsSeleccionados.size > 0 && !idsSeleccionados.has(id)) {
     if (confirm(`Hay ${idsSeleccionados.size} filas seleccionadas.\n\n¿Quieres editar el campo "${campo}" en TODAS las filas seleccionadas?\n\n(Si pulsas Cancelar, solo se editará esta celda)`)) {
       abrirModalEdicionMasivaConCampo(campo);
@@ -560,7 +572,6 @@ $('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)'
     }
   }
   
-  // ✅ Si hay filas seleccionadas Y esta fila SÍ está seleccionada → editar masivo directamente
   if (idsSeleccionados.size > 1 && idsSeleccionados.has(id)) {
     if (confirm(`Esta fila está seleccionada (${idsSeleccionados.size} filas en total).\n\n¿Quieres editar el campo "${campo}" en TODAS las filas seleccionadas?\n\n(Si pulsas Cancelar, solo se editará esta celda)`)) {
       abrirModalEdicionMasivaConCampo(campo);
@@ -568,7 +579,6 @@ $('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)'
     }
   }
   
-  // Edición individual normal
   const valorActual = rowData[campo] || '';
   const input = $(`<input type="text" class="edit-input" value="${valorActual.replace(/"/g, '&quot;')}">`);
   
@@ -604,9 +614,6 @@ $('#tablaIncidencias tbody').on('click', 'td:not(:last-child):not(:first-child)'
   });
 });
 
-// ═══════════════════════════════════════════════════════════════
-// ✅ NUEVO: MODAL DE EDICIÓN MASIVA
-// ═══════════════════════════════════════════════════════════════
 function abrirModalEdicionMasiva() {
   if (idsSeleccionados.size === 0) {
     toast('⚠️ No hay filas seleccionadas', 'error');
@@ -614,7 +621,7 @@ function abrirModalEdicionMasiva() {
   }
   document.getElementById('modalEdicionMasiva').classList.add('active');
   document.getElementById('modalNumFilas').textContent = idsSeleccionados.size;
-  document.getElementById('selectCampo').value = 'turno'; // Campo por defecto
+  document.getElementById('selectCampo').value = 'turno';
   document.getElementById('inputValor').value = '';
   document.getElementById('inputValor').focus();
   actualizarNombreCampo();
@@ -637,7 +644,6 @@ function cerrarModalEdicion() {
   document.getElementById('modalEdicionMasiva').classList.remove('active');
 }
 
-// Actualizar nombre del campo seleccionado
 document.getElementById('selectCampo').addEventListener('change', actualizarNombreCampo);
 
 function actualizarNombreCampo() {
@@ -646,7 +652,6 @@ function actualizarNombreCampo() {
   document.getElementById('modalCampoNombre').textContent = nombre;
 }
 
-// Enter en el input aplica la edición
 document.getElementById('inputValor').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
     e.preventDefault();
@@ -671,7 +676,6 @@ async function aplicarEdicionMasiva() {
     return;
   }
   
-  // Confirmación si son muchas filas
   if (numFilas > 5) {
     if (!confirm(`¿Aplicar "${nuevoValor}" al campo "${campo}" en ${numFilas} filas?\n\nEsta acción no se puede deshacer.`)) {
       return;
@@ -684,13 +688,11 @@ async function aplicarEdicionMasiva() {
   let exitosos = 0;
   let errores = 0;
   
-  // Actualizar en Supabase
   for (const id of idsSeleccionados) {
     try {
       await actualizarIncidencia(id, { [campo]: nuevoValor });
       exitosos++;
       
-      // Actualizar también en datosOriginales
       const fila = datosOriginales.find(d => d.id === id);
       if (fila) fila[campo] = nuevoValor;
     } catch (error) {
@@ -699,7 +701,6 @@ async function aplicarEdicionMasiva() {
     }
   }
   
-  // Refrescar tabla
   tablaDT.clear();
   tablaDT.rows.add(datosFiltrados);
   tablaDT.draw(false);
@@ -713,14 +714,10 @@ async function aplicarEdicionMasiva() {
   cancelarSeleccion();
 }
 
-// Cerrar modal al hacer clic fuera
 document.getElementById('modalEdicionMasiva').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalEdicion();
 });
 
-// ═══════════════════════════════════════════════════════════════
-// ELIMINAR INDIVIDUAL
-// ═══════════════════════════════════════════════════════════════
 $('#tablaIncidencias tbody').on('click', '.btn-eliminar', async function(e) {
   e.stopPropagation();
   const id = $(this).data('id');
@@ -735,9 +732,6 @@ $('#tablaIncidencias tbody').on('click', '.btn-eliminar', async function(e) {
   }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// NUEVA INCIDENCIA
-// ═══════════════════════════════════════════════════════════════
 document.getElementById('btnNueva').addEventListener('click', async function() {
   const nueva = {
     fecha_aviso: new Date().toLocaleDateString('es-ES'),
@@ -755,9 +749,6 @@ document.getElementById('btnNueva').addEventListener('click', async function() {
   }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// EXPORTAR CSV
-// ═══════════════════════════════════════════════════════════════
 document.getElementById('btnExportarCSV').addEventListener('click', () => {
   if (datosFiltrados.length === 0) { toast('⚠️ Sin datos', 'error'); return; }
   
@@ -779,19 +770,27 @@ document.getElementById('btnExportarCSV').addEventListener('click', () => {
   toast(`📥 ${datosFiltrados.length} registros exportados`, 'exito');
 });
 
-// ═══════════════════════════════════════════════════════════════
-// APLICAR FILTROS
-// ═══════════════════════════════════════════════════════════════
+// ✅ CAMBIO 3: Parseo robusto de fechas en los filtros
 function aplicarFiltros() {
   const fi = document.getElementById('fechaInicio').valueAsDate;
   const ff = document.getElementById('fechaFin').valueAsDate;
   
   let datos = datosOriginales.filter(d => {
     if (fi && ff && d.fecha_aviso) {
-      const parts = d.fecha_aviso.split('/').map(Number);
-      if (parts.length === 3) {
-        const fecha = new Date(parts[2], parts[1]-1, parts[0]);
-        if (fecha < fi || fecha > ff) return false;
+      let fecha = null;
+      if (d.fecha_aviso.includes('/')) {
+        const parts = d.fecha_aviso.split('/').map(Number);
+        if (parts.length === 3) fecha = new Date(parts[2], parts[1]-1, parts[0]);
+      } else if (d.fecha_aviso.includes('-')) {
+        const parts = d.fecha_aviso.split('-').map(Number);
+        if (parts.length === 3) fecha = new Date(parts[0], parts[1]-1, parts[2]);
+      } else {
+        fecha = new Date(d.fecha_aviso);
+      }
+      
+      if (fecha && !isNaN(fecha)) {
+        const fNorm = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+        if (fNorm < fi || fNorm > ff) return false;
       }
     }
     return true;
@@ -868,9 +867,6 @@ function aplicarFiltros() {
   renderTags();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FILTROS POR CATEGORÍA
-// ═══════════════════════════════════════════════════════════════
 document.querySelectorAll('.btn-filtro[data-campo]').forEach(btn => {
   btn.addEventListener('click', function(e) {
     e.stopPropagation();
@@ -1230,9 +1226,6 @@ function cerrarAlFuera(e) {
   document.removeEventListener('click', cerrarAlFuera);
 }
 
-// ═══════════════════════════════════════════════════════════════
-// TAGS DE FILTROS ACTIVOS
-// ═══════════════════════════════════════════════════════════════
 function renderTags() {
   const cont = document.getElementById('filtrosActivos');
   cont.innerHTML = '';
@@ -1287,9 +1280,6 @@ function renderTags() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// HISTORIAL ATRÁS/ADELANTE
-// ═══════════════════════════════════════════════════════════════
 function pushHistorial() {
   historial = historial.slice(0, historialIdx + 1);
   historial.push({
@@ -1331,9 +1321,6 @@ document.getElementById('btnAdelante').addEventListener('click', () => {
   }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// CONTROLES
-// ═══════════════════════════════════════════════════════════════
 document.getElementById('fechaInicio').addEventListener('change', aplicarFiltros);
 document.getElementById('fechaFin').addEventListener('change', aplicarFiltros);
 
@@ -1352,9 +1339,6 @@ document.getElementById('buscarDescripcion').addEventListener('input', () => {
   aplicarFiltros();
 });
 
-// ═══════════════════════════════════════════════════════════════
-// MENÚ DE COLUMNAS
-// ═══════════════════════════════════════════════════════════════
 const btnColumnas = document.getElementById('btnColumnas');
 const colMenu = document.getElementById('colMenu');
 
@@ -1390,9 +1374,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// ✅ SELECCIÓN MÚLTIPLE
-// ═══════════════════════════════════════════════════════════════
 $('#tablaIncidencias tbody').on('click', '.chk-fila', function(e) {
   e.stopPropagation();
   const id = parseInt($(this).data('id'));
@@ -1495,9 +1476,6 @@ async function eliminarSeleccionadas() {
   cargarDatos();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// MODO CLARO/OSCURO
-// ═══════════════════════════════════════════════════════════════
 document.getElementById('toggleModo').addEventListener('click', () => {
   modoOscuro = !modoOscuro;
   document.body.classList.toggle('light-mode', !modoOscuro);
@@ -1506,9 +1484,6 @@ document.getElementById('toggleModo').addEventListener('click', () => {
 });
 document.getElementById('toggleModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
 
-// ═══════════════════════════════════════════════════════════════
-// CARGAR ESTADO GUARDADO
-// ═══════════════════════════════════════════════════════════════
 function cargarEstado() {
   const estado = localStorage.getItem('ct_estado');
   if (estado) {
@@ -1523,9 +1498,6 @@ function cargarEstado() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// INICIALIZACIÓN
-// ═══════════════════════════════════════════════════════════════
 pushHistorial();
 cargarDatos();
 </script>

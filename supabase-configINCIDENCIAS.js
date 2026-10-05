@@ -6,7 +6,7 @@ const SUPABASE_URL = 'https://stzatnubgykvdwjfegfd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0emF0bnViZ3lrdmR3amZlZ2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMTI3NDksImV4cCI6MjEwNDU4ODc0OX0.sHUA7c9oZDCPUpSXOKiRgh4O3NeqXAO9GgXNPnzbggs';
 
 // ✅ CAMBIA AQUÍ EL NOMBRE DE LA TABLA
-const TABLA_PRINCIPAL = 'incidencias';  // ← CAMBIADO A 'incidencias'
+const TABLA_PRINCIPAL = 'incidencias_aux';  // ← CAMBIADO A 'incidencias'
 
 // Inicializar cliente de Supabase
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

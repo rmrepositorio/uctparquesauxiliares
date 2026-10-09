@@ -240,7 +240,7 @@ async function cargarDatos() {
     
     while (true) {
       const { data, error } = await supabaseClient
-        .from('incidencias')
+        .from('incidencias_aux')
         .select('*')
         .range(desde, desde + limite - 1)
         .order('fecha_aviso', { ascending: true });

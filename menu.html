@@ -1,0 +1,83 @@
+<!-- Contenedor del menú con su propio fondo -->
+<div class="menu-wrapper">
+    <nav class="menu-container">
+  <center>
+<a href="http://uctlipasam.vercel.app" class="btn-nav">💒 SELECCIONAR DASHBOARD</a>
+  <a href="incidencias.html" class="btn-nav">📄 Listado Averias</a>
+  <a href="reiteradas.html" class="btn-nav">📚 Averias Reiteradas</a>
+  <a href="informe.html" class="btn-nav">📜 Ver Informe</a>
+  <a href="resumen_vehiculos.html" class="btn-nav">📊 Tabla Resumen</a>
+<a href="pegar.html" class="btn-nav">📥 Insertar nuevos datos</a>
+</center>
+    </nav>
+</div>
+
+<!-- Estilos limitados SOLO al menú -->
+<style>
+    /* El fondo oscuro se aplica solo a este wrapper, no al body de tu página */
+    .menu-wrapper {
+        background-color: #6E6E5E;
+        padding: 15px 20px;
+        width: 100%;
+        border-radius: 8px; /* Opcional, para bordes redondeados */
+    }
+
+    .menu-container {
+        display: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: flex-start;
+    }
+
+    .menu-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        color: #ffffff;
+        background-color: #2a2a3e;
+        border: 1px solid #3a3a52;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .menu-btn:hover {
+        background-color: #3a3a52;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .menu-btn.active {
+        background-color: #2dd4bf;
+        color: #1a1a2e;
+        border-color: #2dd4bf;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .menu-btn.active:hover {
+        background-color: #26b8a6;
+    }
+
+    .menu-btn .icon {
+        font-size: 16px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .menu-container {
+            justify-content: center;
+        }
+        .menu-btn {
+            padding: 10px 14px;
+            font-size: 12px;
+        }
+    }
+</style>

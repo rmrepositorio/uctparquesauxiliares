@@ -133,14 +133,22 @@
 </head>
 <body>
 
+
 <div class="header">
+
+
   <h1>📝 Incidencias <span style="font-size:0.6em;color:var(--text-muted);font-weight:400;">— Editable</span></h1>
-  <a href="index.html" class="btn-nav">🏠 Dashboard</a>
-  <a href="reiteradas.html" class="btn-nav">✔Averias Reiterativas</a>
-  <a href="pegar.html" class="btn-nav">📥 Pegar Datos</a>
-  <button id="btnNueva" class="btn-nueva">➕ Nueva incidencia</button>
+<br>
+<a href="index.html" class="btn-nav">← Dashboard</a>
+  <a href="http://uctlipasam.vercel.app" class="btn-nav">💒 SELECCIONAR DASHBOARD</a>
+  <a href="incidencias.html" class="btn-nav">📄 Listado Averias</a>
+  <a href="reiteradas.html" class="btn-nav">📚 Averias Reiteradas</a>
+  <a href="informe.html" class="btn-nav">📜 Ver Informe</a>
+  <a href="resumen_vehiculos.html" class="btn-nav">📊 Tabla Resumen</a>
+<a href="pegar.html" class="btn-nav">📥 Insertar nuevos datos</a>
   <button id="toggleModo" class="btn-nav">☀ Modo claro</button>
 </div>
+
 
 <div class="container">
   <div class="controls">
@@ -152,6 +160,7 @@
     <button id="btnRecargar" class="btn-nav">🔄 Recargar</button>
     <button id="btnColumnas" class="btn-nav" style="position:relative;">👁 Columnas</button>
     <button id="btnExportarCSV" class="btn-nav">📥 Exportar CSV</button>
+  <button id="btnNueva" class="btn-nueva">➕ Nueva incidencia</button>
     <div style="margin-left:auto;">
       <div class="contador">📊 Total: <strong id="totalRegistros">0</strong> incidencias</div>
     </div>
@@ -1501,5 +1510,6 @@ function cargarEstado() {
 pushHistorial();
 cargarDatos();
 </script>
+<script src="scriptaux.js"></script>
 </body>
 </html>

@@ -82,16 +82,15 @@
 </head>
 <body>
 
+    <!-- 1. AQUÍ VA EL CONTENEDOR DEL MENÚ (Al principio del body) -->
+    <header>
+        <div id="menu-container"></div>
+    </header>
 
 <div class="header">
   <span class="header-logo">⚠️ Averías Reiteradas - Parque Central - UCT</span>
-<a href="index.html" class="btn-nav">← Dashboard</a>
-    <a href="http://uctlipasam.vercel.app" class="btn-nav">💒 SELECCIONAR DASHBOARD</a>
-  <a href="incidencias.html" class="btn-nav">📄 Listado Averias</a>
-  <a href="reiteradas.html" class="btn-nav">📚 Averias Reiteradas</a>
-  <a href="informe.html" class="btn-nav">📜 Ver Informe</a>
-  <a href="resumen_vehiculos.html" class="btn-nav">📊 Tabla Resumen</a>
-<a href="pegar.html" class="btn-nav">📥 Insertar nuevos datos</a>
+  <a href="index.html" class="btn-nav">← Dashboard</a>
+  <a href="incidencias.html" class="btn-nav">📋 Incidencias</a>
   <button id="btnModo" class="btn-nav" style="margin-left:auto;">☀ Modo claro</button>
 </div>
 
@@ -802,6 +801,20 @@ document.getElementById('btnModo').addEventListener('click', () => {
   localStorage.setItem('ct_modo', modoOscuro ? 'dark' : 'light');
 });
 document.getElementById('btnModo').textContent = modoOscuro ? '☀ Modo claro' : '🌙 Modo oscuro';
+
+// ═══════════════════════════════════════════════════════════════
+// INICIALIZACIÓN
+// ═══════════════════════════════════════════════════════════════
+cargarDatos();
+</script>
+    <!-- 3. AQUÍ VA EL SCRIPT (Preferiblemente al final del body) -->
+    <script>
+        fetch('menu.html')
+          .then(response => response.text())
+          .then(data => {
+            document.getElementById('menu-container').innerHTML = data;
+          });
+    </script>
 
 </body>
 </html>
